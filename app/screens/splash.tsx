@@ -5,14 +5,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 // Ajuste o caminho/nome do logo conforme seu projeto
-const logo = require("../../assets/images/icon.png");
+const logo = require("../../assets/images/image.png");
 
 export default function SplashPage() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
 
     const onContinue = () => {
-        router.push("/screens/login");
+        router.replace("/screens/login");
     }
 
     return (
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    logo: { width: 160, height: 160, borderRadius: 80, marginBottom: 24 },
+    logo: { width: 160, height: 160, borderRadius: 0, marginBottom: 24 },
     textWrap: { alignItems: "center" },
     title: { color: "#FFFFFF", fontSize: 36, fontWeight: "700", marginBottom: 8 },
     subtitle: { color: "#CCCCCC", fontSize: 16 },

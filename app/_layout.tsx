@@ -5,12 +5,13 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+
+// No explicit anchor so the router uses the Stack order to determine
+// the initial screen (the first Stack.Screen entry).
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -19,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="screens/modal" options={{ presentation: 'modal', title: 'Modal' }} />
         <Stack.Screen name="screens/login" options={{ headerShown: false }} />
+        <Stack.Screen name="sreens/my-sessions" options={{ title: 'Minhas Sessões' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

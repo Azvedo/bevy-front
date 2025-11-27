@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useRouter } from "expo-router";
 
 interface LoginPageProps {
     onLogin?: () => void;
@@ -23,9 +24,13 @@ export default function LoginPage({ onLogin, onBack }: LoginPageProps) {
     const [password, setPassword] = useState("");
     const [isSignUp, setIsSignUp] = useState(false);
 
+    const router = useRouter();
+
     const handleSubmit = () => {
         // aqui você adicionaria validação / chamada de API
         onLogin && onLogin();
+        router.push("/(tabs)");
+
     };
 
     return (
