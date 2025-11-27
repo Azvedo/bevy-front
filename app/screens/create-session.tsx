@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     Text,
     TextInput,
@@ -12,6 +11,7 @@ import {
     View
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Session {
     id: string;
@@ -138,7 +138,7 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#121212' }}>
+        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: '#121212' }}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={{ flex: 1 }}
