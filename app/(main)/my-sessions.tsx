@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
+import { ArrowLeftIcon } from 'lucide-react-native';
 import React from 'react';
 import {
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export type Session = {
@@ -139,7 +140,10 @@ export default function MySessionsScreen({
           onPress={onBack ? onBack : () => router.back()}
           style={styles.backButton}
         >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <ArrowLeftIcon color="#CCCCCC" size={20} />
           <Text style={styles.backText}>Voltar</Text>
+        </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Minhas Sessões</Text>
       </View>
