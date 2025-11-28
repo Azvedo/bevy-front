@@ -22,7 +22,7 @@ export type Session = {
   description?: string;
 };
 
-const mockSessions: Session[] = [
+export const mockSessions: Session[] = [
   {
     id: '1',
     sport: 'Futebol',
@@ -82,11 +82,21 @@ export default function MySessionsScreen({
 }: Props) {
   const router = useRouter();
 
-  const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
+ const confirmed = mockSessions;
 
   const renderSessionCard = (session: Session, isCreated = false) => {
     return (
-      <View key={session.id} style={[styles.card, isCreated && styles.cardHighlight]}>
+      <TouchableOpacity
+        key={session.id}
+        style={[styles.card, isCreated && styles.cardHighlight]}
+        activeOpacity={0.9}
+        onPress={() =>
+          router.push({
+            pathname: '/(main)/session-details',
+            params: { id: session.id },
+          })
+        }
+      >
         <View style={styles.cardHeader}>
           <View>
             <Text style={styles.sessionSport}>{session.sport}</Text>
@@ -128,7 +138,7 @@ export default function MySessionsScreen({
           {session.price && <Text style={styles.metaText}>{session.price} por pessoa</Text>}
           {session.description && <Text style={styles.description}>{session.description}</Text>}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
