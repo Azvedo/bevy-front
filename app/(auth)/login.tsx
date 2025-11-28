@@ -1,3 +1,5 @@
+import Octicons from "@expo/vector-icons/Octicons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     Image,
@@ -10,7 +12,6 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useRouter } from "expo-router";
 
 interface LoginPageProps {
     onLogin?: () => void;
@@ -21,13 +22,14 @@ const logo = require("../../assets/images/image.png");
 export default function LoginPage({ onLogin }: LoginPageProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     const router = useRouter();
 
     const handleSubmit = () => {
         // aqui você adicionaria validação / chamada de API
         onLogin && onLogin();
-        router.push("/(main)/home");
+        router.replace("/(main)/home");
 
     };
 
@@ -44,36 +46,47 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     <Text style={styles.subtitle}>{"Entre para continuar"}</Text>
 
                     <View style={styles.form}>
-                        <TextInput
-                            value={email}
-                            onChangeText={setEmail}
-                            placeholder="Email"
-                            placeholderTextColor="#CCCCCC"
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            style={styles.input}
-                        />
+                        <View style={styles.form_fields}>
+                            <TextInput
+                                value={email}
+                                onChangeText={setEmail}
+                                placeholder="Email"
+                                placeholderTextColor="#CCCCCC"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                style={styles.input}
+                            />
 
-                        <TextInput
-                            value={password}
-                            onChangeText={setPassword}
-                            placeholder="Senha"
-                            placeholderTextColor="#CCCCCC"
-                            secureTextEntry
-                            style={styles.input}
-                        />
+                            <View style={styles.inputContainer}>
+                                <TextInput
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    placeholder="Senha"
+                                    placeholderTextColor="#CCCCCC"
+                                    secureTextEntry={!showPassword}
+                                    style={styles.input}
+                                />
+                                <TouchableOpacity
+                                    style={styles.eyeButton}
+                                    onPress={() => setShowPassword(!showPassword)}
+                                >
+                                    <Octicons 
+                                        name={showPassword ? "eye" : "eye-closed"} 
+                                        size={20} 
+                                        color="#CCCCCC" 
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => router.push("/(auth)/forgot-password")} accessibilityRole="button">
+                            <Text style={styles.outlineButtonText}>{"Esqueceu a senha?"}</Text>
+                        </TouchableOpacity>
 
                         <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} accessibilityRole="button">
                             <Text style={styles.primaryButtonText}>{"Entrar"}</Text>
                         </TouchableOpacity>
 
-                        <View style={styles.dividerWrap}>
-                            <View style={styles.divider} />
-                            <Text style={styles.dividerText}>ou</Text>
-                            <View style={styles.divider} />
-                        </View>
-
-                        <TouchableOpacity onPress={() =>  router.push("/screens/signup")} style={styles.switchRow} accessibilityRole="button">
+                        <TouchableOpacity onPress={() => router.push("/(auth)/signup")} style={styles.switchRow} accessibilityRole="button">
                             <Text style={styles.switchText}>{"Não tem uma conta? Cadastrar"}</Text>
                         </TouchableOpacity>
                     </View>
@@ -89,15 +102,27 @@ const styles = StyleSheet.create({
     logo: { width: 96, height: 96, borderRadius: 0, marginBottom: 20 },
     title: { color: "#FFFFFF", fontSize: 24, fontWeight: "700", marginBottom: 6 },
     subtitle: { color: "#CCCCCC", fontSize: 14, marginBottom: 18 },
-    form: { width: "100%", maxWidth: 420, alignItems: "center" },
+    form: { width: "100%", maxWidth: 420, alignItems: "center", gap: 8 },
+    form_fields: { width: "100%", gap: 4},
+    inputContainer: {
+        position: "relative",
+        width: "100%",
+    },
     input: {
         width: "100%",
         backgroundColor: "#2A2A2A",
         color: "#FFFFFF",
         paddingVertical: 14,
         paddingHorizontal: 12,
+        paddingRight: 50,
         borderRadius: 8,
         marginBottom: 12,
+    },
+    eyeButton: {
+        position: "absolute",
+        right: 15,
+        top: 8,
+        padding: 5,
     },
     primaryButton: {
         width: "100%",
@@ -118,6 +143,10 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderWidth: 1,
         borderColor: "rgba(204,204,204,0.2)",
+    },
+    forgotPasswordButton: {
+        alignSelf: "flex-end",
+        marginBottom: 12,
     },
     outlineButtonText: { color: "#FFFFFF" },
     switchRow: { marginTop: 16 },
