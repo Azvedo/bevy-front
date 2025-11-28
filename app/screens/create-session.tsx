@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -47,6 +48,10 @@ const availableLevels = [
 
 export default function CreateSessionScreen({ onBack, onCreateSession, editingSession }: CreateSessionScreenProps) {
     const router = useRouter();
+    // estado para saber se está enviando uma requisição de criação
+    const [isLoading, setIsLoading] = useState(false);
+    // estado para armazenar erros de criação e exibi-los na interface
+    const [createError, setCreateError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         sport: editingSession?.sport || availableSports[0],
         location: editingSession?.location || '',
@@ -95,15 +100,37 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
         }
     };
 
-    const handleSubmit = () => {
-        if (onCreateSession) {
-            onCreateSession(formData);
-        } else {
-            console.log('Session created:', formData);
-            // Implement API call here
-            if (router.canGoBack()) {
-                router.back();
+    const handleSubmit = async () => {
+
+        setCreateError(null);
+
+        // Validação simples
+        if (!formData.sport || !formData.location || !formData.date || !formData.time || !formData.spots || !formData.level) {
+            setCreateError('Por favor, preencha todos os campos obrigatórios.');
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Simula uma chamada de API (remover o setTimeout quando integrar com backend real)
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            if (onCreateSession) {
+                onCreateSession(formData);
+            } else {
+                console.log('Session created:', formData);
+                // Implement API call here
+                if (router.canGoBack()) {
+                    router.back();
+                }
             }
+        } catch (error) {
+            console.error(error);
+            setCreateError('Ocorreu um erro ao criar a pelada. Tente novamente.');
+        } finally {
+            // Finaliza o loading independente de sucesso ou erro
+            setIsLoading(false);
         }
     };
 
@@ -380,8 +407,18 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                         />
                     </View>
 
+                    {/* Mensagem de Erro */}
+                    {createError && (
+                        <View style={{ marginBottom: 16, padding: 12, backgroundColor: 'rgba(255, 82, 82, 0.1)', borderRadius: 8, borderWidth: 1, borderColor: '#FF5252' }}>
+                            <Text style={{ color: '#FF5252', textAlign: 'center' }}>
+                                {createError}
+                            </Text>
+                        </View>
+                    )}
+
                     {/* Submit Button */}
                     <TouchableOpacity
+                        disabled={isLoading}
                         onPress={handleSubmit}
                         style={{
                             width: '100%',
@@ -397,9 +434,13 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                             elevation: 4
                         }}
                     >
-                        <Text style={{ color: '#121212', fontWeight: 'bold', fontSize: 18 }}>
-                            {editingSession ? 'Atualizar Pelada' : 'Criar Pelada'}
-                        </Text>
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="#121212" />
+                        ) : (
+                            <Text style={{ color: '#121212', fontWeight: 'bold', fontSize: 18 }}>
+                                {editingSession ? 'Atualizar Pelada' : 'Criar Pelada'}
+                            </Text>
+                        )}
                     </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
