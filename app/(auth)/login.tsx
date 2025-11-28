@@ -14,22 +14,20 @@ import { useRouter } from "expo-router";
 
 interface LoginPageProps {
     onLogin?: () => void;
-    onBack?: () => void;
 }
 
-const logo = require("../../assets/images/icon.png");
+const logo = require("../../assets/images/image.png");
 
-export default function LoginPage({ onLogin, onBack }: LoginPageProps) {
+export default function LoginPage({ onLogin }: LoginPageProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [isSignUp, setIsSignUp] = useState(false);
 
     const router = useRouter();
 
     const handleSubmit = () => {
         // aqui você adicionaria validação / chamada de API
         onLogin && onLogin();
-        router.push("/(tabs)");
+        router.push("/(main)/home");
 
     };
 
@@ -42,8 +40,8 @@ export default function LoginPage({ onLogin, onBack }: LoginPageProps) {
                 <View style={styles.inner}>
                     <Image source={logo} style={styles.logo} resizeMode="cover" />
 
-                    <Text style={styles.title}>{isSignUp ? "Criar Conta" : "Bem-vindo de volta"}</Text>
-                    <Text style={styles.subtitle}>{isSignUp ? "Cadastre-se para começar" : "Entre para continuar"}</Text>
+                    <Text style={styles.title}>{"Faça login"}</Text>
+                    <Text style={styles.subtitle}>{"Entre para continuar"}</Text>
 
                     <View style={styles.form}>
                         <TextInput
@@ -66,7 +64,7 @@ export default function LoginPage({ onLogin, onBack }: LoginPageProps) {
                         />
 
                         <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} accessibilityRole="button">
-                            <Text style={styles.primaryButtonText}>{isSignUp ? "Cadastrar" : "Entrar"}</Text>
+                            <Text style={styles.primaryButtonText}>{"Entrar"}</Text>
                         </TouchableOpacity>
 
                         <View style={styles.dividerWrap}>
@@ -75,12 +73,8 @@ export default function LoginPage({ onLogin, onBack }: LoginPageProps) {
                             <View style={styles.divider} />
                         </View>
 
-                        <TouchableOpacity style={styles.outlineButton} onPress={handleSubmit} accessibilityRole="button">
-                            <Text style={styles.outlineButtonText}>Continuar com Google</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => setIsSignUp((s) => !s)} style={styles.switchRow} accessibilityRole="button">
-                            <Text style={styles.switchText}>{isSignUp ? "Já tem uma conta? Entrar" : "Não tem uma conta? Cadastrar"}</Text>
+                        <TouchableOpacity onPress={() =>  router.push("/screens/signup")} style={styles.switchRow} accessibilityRole="button">
+                            <Text style={styles.switchText}>{"Não tem uma conta? Cadastrar"}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -92,7 +86,7 @@ export default function LoginPage({ onLogin, onBack }: LoginPageProps) {
 const styles = StyleSheet.create({
     container: { flexGrow: 1, backgroundColor: "#121212" },
     inner: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center" },
-    logo: { width: 96, height: 96, borderRadius: 48, marginBottom: 20 },
+    logo: { width: 96, height: 96, borderRadius: 0, marginBottom: 20 },
     title: { color: "#FFFFFF", fontSize: 24, fontWeight: "700", marginBottom: 6 },
     subtitle: { color: "#CCCCCC", fontSize: 14, marginBottom: 18 },
     form: { width: "100%", maxWidth: 420, alignItems: "center" },

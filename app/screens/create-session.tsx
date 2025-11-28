@@ -1,17 +1,18 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Session {
     id: string;
@@ -61,6 +62,33 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
         description: editingSession?.description || '',
         level: editingSession?.level || '',
     });
+
+    const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+    const [isTimePickerVisible, setTimePickerVisible] = useState(false);
+    const formatDate = (d: Date) => {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
+    const formatTime = (d: Date) => {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+       return `${hh}:${mm}`;
+    };
+
+    const maskDateInput = (value: string) => {
+       const digits = value.replace(/\D/g, '').slice(0, 8);
+       if (digits.length <= 2) return digits;
+       if (digits.length <= 4) return `${digits.slice(0,2)}/${digits.slice(2)}`;
+       return `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
+    };
+
+    const maskTimeInput = (value: string) => {
+       const digits = value.replace(/\D/g, '').slice(0, 4);
+       if (digits.length <= 2) return digits;
+       return `${digits.slice(0,2)}:${digits.slice(2)}`;
+    };
 
     const handleBack = () => {
         if (onBack) {
@@ -137,7 +165,7 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#121212' }}>
+        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: '#121212' }}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={{ flex: 1 }}
@@ -254,13 +282,37 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                                 <Feather name="calendar" size={16} color="#C7FF00" />
                                 <Text style={{ color: 'white', fontSize: 14, fontWeight: '500', marginLeft: 8 }}>Data *</Text>
                             </View>
-                            <TextInput
-                                placeholder="DD/MM/AAAA"
-                                placeholderTextColor="rgba(204, 204, 204, 0.5)"
-                                value={formData.date}
-                                onChangeText={(text) => setFormData({ ...formData, date: text })}
-                                style={inputStyles}
+                            {Platform.OS === 'web' ? (
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder="DD/MM/AAAA"
+                                    placeholderTextColor="rgba(204, 204, 204, 0.5)"
+                                    value={formData.date}
+                                    onChangeText={(text) => setFormData({ ...formData, date: maskDateInput(text) })}
+                                    style={inputStyles}
+                                />
+                            ) : (
+                            <>
+                            <TouchableOpacity
+                                onPress={() => setDatePickerVisible(true)}
+                                style={{ ...inputStyles, justifyContent: 'center', height: 48 }}
+                            >
+                                <Text style={{ color: formData.date ? 'white' : 'rgba(204,204,204,0.5)' }}>
+                                    {formData.date || 'DD/MM/AAAA'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <DateTimePickerModal
+                                isVisible={isDatePickerVisible}
+                                mode="date"
+                                onConfirm={(date) => {
+                                    setFormData({ ...formData, date: formatDate(date) });
+                                    setDatePickerVisible(false);
+                                }}
+                                onCancel={() => setDatePickerVisible(false)}
                             />
+                            </>
+                            )}
                         </View>
 
                         <View style={{ flex: 1, ...cardStyles }}>
@@ -268,13 +320,40 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                                 <Feather name="clock" size={16} color="#C7FF00" />
                                 <Text style={{ color: 'white', fontSize: 14, fontWeight: '500', marginLeft: 8 }}>Hora *</Text>
                             </View>
-                            <TextInput
-                                placeholder="HH:MM"
-                                placeholderTextColor="rgba(204, 204, 204, 0.5)"
-                                value={formData.time}
-                                onChangeText={(text) => setFormData({ ...formData, time: text })}
-                                style={inputStyles}
+                            {Platform.OS === 'web' ? (
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder="HH:MM"
+                                    placeholderTextColor="rgba(204, 204, 204, 0.5)"
+                                    value={formData.time}
+                                    onChangeText={(text) => {
+                                        setFormData({ ...formData, time: maskTimeInput(text) });
+                                    }}
+                                    style={inputStyles}
+                                />
+                            ) : (
+                            <>
+                            <TouchableOpacity
+                                onPress={() => setTimePickerVisible(true)}
+                               style={{ ...inputStyles, justifyContent: 'center', height: 48 }}
+                            >
+                                <Text style={{ color: formData.time ? 'white' : 'rgba(204,204,204,0.5)' }}>
+                                    {formData.time || 'HH:MM'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <DateTimePickerModal
+                                isVisible={isTimePickerVisible}
+                                mode="time"
+                                is24Hour={true}
+                                onConfirm={(date) => {
+                                    setFormData({ ...formData, time: formatTime(date) });
+                                    setTimePickerVisible(false);
+                                }}
+                                onCancel={() => setTimePickerVisible(false)}
                             />
+                            </>
+                            )}
                         </View>
                     </View>
 
@@ -286,7 +365,7 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                                 <Text style={{ color: 'white', fontSize: 14, fontWeight: '500', marginLeft: 8 }}>Vagas *</Text>
                             </View>
                             <TextInput
-                                keyboardType="numeric"
+                                keyboardType="number-pad"
                                 placeholder="Ex: 10"
                                 placeholderTextColor="rgba(204, 204, 204, 0.5)"
                                 value={formData.spots}
@@ -301,6 +380,7 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                                 <Text style={{ color: 'white', fontSize: 14, fontWeight: '500', marginLeft: 8 }}>Valor</Text>
                             </View>
                             <TextInput
+                                keyboardType="numeric"
                                 placeholder="R$ 20,00"
                                 placeholderTextColor="rgba(204, 204, 204, 0.5)"
                                 value={formData.price}
