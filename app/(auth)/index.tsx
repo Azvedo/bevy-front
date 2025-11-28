@@ -12,7 +12,7 @@ export default function AuthIndex() {
   const insets = useSafeAreaInsets();
 
   const onContinue = () => {
-    router.push("/login");
+    router.replace("/login");
   }
 
   return (

@@ -11,7 +11,13 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(main)" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="(main)" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false // Impede voltar para auth após login
+          }} 
+        />
         <Stack.Screen name="screens/create-session" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
