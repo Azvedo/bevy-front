@@ -1,13 +1,19 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+type UserData = {
+  name: string;
+  email: string;
+  // Adicione outros campos conforme necessário
+};
 
 export default function ProfilePage() {
   const router = useRouter();
-
+  const [userData, setUserData] = useState<UserData>({ name: '', email: '' }); // Simulação de dados do usuário
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Perfil</Text>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Configurações</Text>
@@ -19,7 +25,7 @@ export default function ProfilePage() {
           <Text style={styles.buttonText}>Sair</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

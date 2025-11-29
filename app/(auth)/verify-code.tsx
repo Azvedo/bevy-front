@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useRef, useState, React} from "react";
 import {
-    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -13,7 +12,6 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-const logo = require("../../assets/images/image.png");
 
 export default function VerifyCodePage() {
     const [code, setCode] = useState(['', '', '', '', '', '']);
