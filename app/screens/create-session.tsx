@@ -9,10 +9,15 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    Alert
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// URL Da API (@rafa ou quem ler, como ntinha nenhum .env coloquei aqui)
+const API_URL = 'http://localhost:8080/eventos'; 
+const API_TOKEN = 'SEU_TOKEN_AQUI'; // so de teste, ainda n tem auth 
 
 interface Session {
     id: string;
@@ -90,6 +95,35 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
        return `${digits.slice(0,2)}:${digits.slice(2)}`;
     };
 
+        // Função auxiliar para converter Data (DD/MM/AAAA) e Hora (HH:MM) para ISO String
+    const convertToISO = (dateStr: string, timeStr: string) => {
+        try {
+            const [day, month, year] = dateStr.split('/');
+            // Retorna no formato: 2025-12-01T19:00:00
+            return `${year}-${month}-${day}T${timeStr}:00`;
+        } catch (e) {
+            return new Date().toISOString();
+        }
+    };
+
+    // Função auxiliar para converter preço string em number
+    const parsePrice = (priceStr: string) => {
+        if (!priceStr) return 0;
+        // Remove tudo que não é dígito, ponto ou vírgula
+        const clean = priceStr.replace(/[^\d,.]/g, '').replace(',', '.');
+        return parseFloat(clean) || 0;
+    };
+
+    // Mapeia o nível visual para a intensidade da API
+    const mapLevelToIntensity = (level: string) => {
+        switch (level) {
+            case 'Casual': return 'LEVE';
+            case 'Amador': return 'MODERADO';
+            case 'Semiprofissional': return 'ALTA'; // ou INTENSO, dependendo do backend
+            default: return 'MODERADO';
+        }
+    };
+
     const handleBack = () => {
         if (onBack) {
             onBack();
@@ -113,21 +147,50 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
         setIsLoading(true);
 
         try {
-            // Simula uma chamada de API (remover o setTimeout quando integrar com backend real)
-            await new Promise(resolve => setTimeout(resolve, 1500));
+         // Monta o payload conforme o curl fornecido
+            const payload = {
+                nome: `${formData.sport} - ${formData.location}`, // Gera um nome automático ou adicione um campo 'Título'
+                descricao: formData.description || `Pelada de ${formData.sport}`,
+                localizacao: formData.location,
+                dataHora: convertToISO(formData.date, formData.time),
+                custoPeladeiro: parsePrice(formData.price),
+                custoPrestadorServico: 0, // Valor padrão ou adicionar campo no form
+                latitude: -8.05428, // TODO: Obter via geocoding ou mapa real
+                longitude: -34.8813, // TODO: Obter via geocoding ou mapa real
+                intensidade: mapLevelToIntensity(formData.level),
+                tipoCampo: "SOCIETY" // Pode ser dinâmico baseado no esporte
+            };
+
+            console.log('Enviando payload:', JSON.stringify(payload, null, 2));
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_TOKEN}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text(); // Tenta ler o erro como texto
+                throw new Error(`Erro na API: ${response.status} - ${errorData}`);
+            }
+
+            const data = await response.json();
+            console.log('Sucesso:', data);
 
             if (onCreateSession) {
-                onCreateSession(formData);
+                onCreateSession(data);
             } else {
-                console.log('Session created:', formData);
-                // Implement API call here
+                // Sucesso
                 if (router.canGoBack()) {
                     router.back();
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            setCreateError('Ocorreu um erro ao criar a pelada. Tente novamente.');
+            setCreateError(error.message || 'Ocorreu um erro ao criar a pelada. Verifique sua conexão.');
         } finally {
             // Finaliza o loading independente de sucesso ou erro
             setIsLoading(false);
