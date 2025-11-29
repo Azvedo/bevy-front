@@ -23,6 +23,20 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
+        name="search-match"
+        options={{
+          title: 'Buscar Partidas',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="my-sessions"
+        options={{
+          title: 'Minhas Sessões',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="soccerball" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
