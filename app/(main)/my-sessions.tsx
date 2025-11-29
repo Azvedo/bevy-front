@@ -3,12 +3,12 @@ import { ArrowLeftIcon } from 'lucide-react-native';
 import React from 'react';
 import {
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type Session = {
   id: string;
@@ -134,20 +134,7 @@ export default function MySessionsScreen({
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={onBack ? onBack : () => router.back()}
-          style={styles.backButton}
-        >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <ArrowLeftIcon color="#CCCCCC" size={20} />
-          <Text style={styles.backText}>Voltar</Text>
-        </View>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Minhas Sessões</Text>
-      </View>
-
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
         contentContainerStyle={styles.container}
         data={[]}
@@ -188,7 +175,7 @@ export default function MySessionsScreen({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#121212' },
+  safe: { flex: 1, backgroundColor: '#121212'},
   header: { backgroundColor: '#1E1E1E', padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(204,204,204,0.2)' },
   backButton: { paddingVertical: 6 },
   backText: { color: '#CCCCCC' },

@@ -5,7 +5,6 @@ import {
   FlatList,
   Modal,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type Session = {
   id: string;
@@ -155,19 +154,7 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={onBack ? onBack : () => router.back()}
-          style={styles.backButton}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ArrowLeftIcon color="#CCCCCC" size={20} />
-            <Text style={styles.backText}>Voltar</Text>
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Buscar Partidas</Text>
-      </View>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.searchRow}>
         <TextInput
           placeholder="Buscar pelo nome da pelada"
@@ -332,10 +319,6 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#121212' },
-  header: { backgroundColor: '#1E1E1E', padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(204,204,204,0.2)' },
-  backButton: { paddingVertical: 6 },
-  backText: { color: '#CCCCCC' },
-  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginTop: 6 },
   container: { padding: 12, paddingBottom: 48 },
   input: {
     width: '100%',

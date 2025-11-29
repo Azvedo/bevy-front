@@ -11,9 +11,12 @@ export default function MainLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
+        tabBarActiveTintColor: Colors[colorScheme ?? 'dark'].tint,
+        headerShown: true,
+        headerStyle:{backgroundColor: '#1E1E1E', borderBottomWidth: 2, borderBottomColor: 'rgba(204,204,204,0.2)'},
+        headerTitleStyle:{color: '#FFFFFF'},
         tabBarButton: HapticTab,
+        tabBarStyle: { backgroundColor: '#1E1E1E' },
       }}>
       <Tabs.Screen
         name="home"
@@ -39,7 +42,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Perfil',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
