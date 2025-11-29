@@ -1,7 +1,8 @@
+import { registerUser } from "@/services/auth";
 import Octicons from "@expo/vector-icons/Octicons";
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+    Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -12,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useRouter } from "expo-router";
 
 interface SignUpProps {
     onLogin?: () => void;
@@ -28,10 +30,40 @@ export default function SignUp({ onLogin }: SignUpProps) {
 
     const router = useRouter();
 
-    const handleSubmit = () => {
-        // aqui você adicionaria validação / chamada de API
-        onLogin && onLogin();
-        router.replace("/(main)/home");
+    const handleSubmit = async () => {
+        try {
+            // Validação básica
+            if (!name.trim() || !email.trim() || !phoneNumber.trim() || !password.trim()) {
+                Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+                return;
+            }
+
+            if (password.length < 6) {
+                Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+                return;
+            }
+
+            await registerUser({
+                nome: name.trim(),
+                email: email.trim().toLowerCase(),
+                telefone: phoneNumber.trim(),
+                senha: password
+            });
+
+            console.log("Usuário registrado com sucesso");
+            router.replace("/(auth)/login");
+        } catch (error) {
+            if (error && typeof error === 'object' && 'response' in error) {
+                // O servidor respondeu com status 400
+                console.log('----------------ERRO 400----------------');
+                console.log('Dados que enviei:', { nome: name, email, telefone: phoneNumber, senha: password }); // Confira se está enviando o que acha que está
+                console.log('RESPOSTA DO SERVIDOR:', (error as any).response.data); // <--- AQUI ESTÁ A RESPOSTA MÁGICA
+                console.log('----------------------------------------');
+
+            } else {
+                console.error('Erro genérico:', error);
+            }
+        }
 
     };
 
@@ -75,7 +107,6 @@ export default function SignUp({ onLogin }: SignUpProps) {
                                 placeholder="Numero de telefone"
                                 placeholderTextColor="#CCCCCC"
                                 keyboardType="phone-pad"
-                                secureTextEntry
                                 style={styles.input}
                             />
 
@@ -92,16 +123,16 @@ export default function SignUp({ onLogin }: SignUpProps) {
                                     style={styles.eyeButton}
                                     onPress={() => setShowPassword(!showPassword)}
                                 >
-                                    <Octicons 
-                                        name={showPassword ? "eye" : "eye-closed"} 
-                                        size={20} 
-                                        color="#CCCCCC" 
+                                    <Octicons
+                                        name={showPassword ? "eye" : "eye-closed"}
+                                        size={20}
+                                        color="#CCCCCC"
                                     />
                                 </TouchableOpacity>
                             </View>
                         </View>
                         <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} accessibilityRole="button">
-                            <Text style={styles.primaryButtonText}>{"Entrar"}</Text>
+                            <Text style={styles.primaryButtonText}>{"Criar Conta"}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => router.push("/(auth)/login")} style={styles.switchRow} accessibilityRole="button">
@@ -121,7 +152,7 @@ const styles = StyleSheet.create({
     title: { color: "#FFFFFF", fontSize: 24, fontWeight: "700", marginBottom: 6 },
     subtitle: { color: "#CCCCCC", fontSize: 14, marginBottom: 18 },
     form: { width: "100%", maxWidth: 420, alignItems: "center", gap: 8 },
-    form_fields: { width: "100%", gap: 4},
+    form_fields: { width: "100%", gap: 4 },
     inputContainer: {
         position: "relative",
         width: "100%",
