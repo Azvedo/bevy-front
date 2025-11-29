@@ -1,6 +1,6 @@
 import Octicons from '@expo/vector-icons/Octicons';
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React,{ useEffect, useState } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
