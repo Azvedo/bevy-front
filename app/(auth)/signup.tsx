@@ -12,6 +12,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -27,11 +28,13 @@ export default function SignUp({ onLogin }: SignUpProps) {
     const [phoneNumber, setPhoneNumber] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const router = useRouter();
 
     const handleSubmit = async () => {
         try {
+            setIsLoading(true);
             // Validação básica
             if (!name.trim() || !email.trim() || !phoneNumber.trim() || !password.trim()) {
                 return;
@@ -49,6 +52,10 @@ export default function SignUp({ onLogin }: SignUpProps) {
             });
 
             console.log("Usuário registrado com sucesso");
+            setEmail("");
+            setName("");
+            setPhoneNumber("");
+            setPassword("");
             router.replace("/(auth)/login");
         } catch (error) {
             if (error && typeof error === 'object' && 'response' in error) {
@@ -61,8 +68,14 @@ export default function SignUp({ onLogin }: SignUpProps) {
             } else {
                 console.error('Erro genérico:', error);
             }
+            setEmail("");
+            setName("");
+            setPhoneNumber("");
+            setPassword("");
+            Alert.alert("Erro", "Não foi possível criar a conta. Tente novamente.");
+        }finally {
+            setIsLoading(false);
         }
-
     };
 
     return (
@@ -130,7 +143,7 @@ export default function SignUp({ onLogin }: SignUpProps) {
                             </View>
                         </View>
                         <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} accessibilityRole="button">
-                            <Text style={styles.primaryButtonText}>{"Criar Conta"}</Text>
+                            {isLoading? <ActivityIndicator color="#121212" /> : <Text style={styles.primaryButtonText}>{"Criar Conta"}</Text>}
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => router.push("/(auth)/login")} style={styles.switchRow} accessibilityRole="button">

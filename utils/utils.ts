@@ -6,6 +6,7 @@ export const saveAuthData = async (accessToken: string, refreshToken: string) =>
     try {
         await SecureStore.setItemAsync('user_token', accessToken);
         await SecureStore.setItemAsync('user_refresh_token', refreshToken);
+        api.defaults.headers.Authorization = `Bearer ${accessToken}`;
     } catch (error) {
         console.error("Erro ao salvar tokens", error);
     }
