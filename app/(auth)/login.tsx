@@ -11,6 +11,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    ActivityIndicator,
 } from "react-native";
 import { loginUser } from "@/services/auth";
 import { saveAuthData } from "@/utils/utils";
@@ -25,12 +26,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const router = useRouter();
 
     const handleSubmit = async() => {
         try {
-            // Validação básica
+            setIsLoading(true);
             if (!email.trim() || !password.trim()) {
                 return;
             }
@@ -39,7 +41,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             router.replace("/(main)/home");
         } catch (error) {
             console.error("Erro ao fazer login:", error);
+            setIsLoading(false);
             return;
+        }finally {
+            setIsLoading(false);
         }
     };
 
@@ -92,8 +97,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                             <Text style={styles.outlineButtonText}>{"Esqueceu a senha?"}</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} accessibilityRole="button">
-                            <Text style={styles.primaryButtonText}>{"Entrar"}</Text>
+                        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} accessibilityRole="button" disabled={isLoading}>
+                            {isLoading ? <ActivityIndicator color="#121212" /> : <Text style={styles.primaryButtonText}>{"Entrar"}</Text>}
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => router.push("/(auth)/signup")} style={styles.switchRow} accessibilityRole="button">

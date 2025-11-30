@@ -18,3 +18,4 @@ export const createEvent = async (eventData: CreateEventDTO) => {
   const response = await api.post("/eventos", eventData);
   return response.data;
 };
+
