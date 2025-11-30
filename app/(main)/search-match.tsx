@@ -1,7 +1,9 @@
+import { searchSessions } from '@/services/search';
 import { useRouter } from 'expo-router';
 import { Filter } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   StyleSheet,
@@ -11,7 +13,6 @@ import {
   TouchableWithoutFeedback,
   View
 } from 'react-native';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -61,149 +62,114 @@ const WEEK_DAY_LABELS: Record<WeekDay, string> = {
   domingo: 'Domingo',
 };
 
-export type Session = {
-  id: string;
-  name: string;
-  sport: string;
-  location: string;
-  date: string; // ISO date
-  time: string; // hh:mm
-  level: string;
-  participants: string[];
-  totalSpots: number;
-  price?: string | number;
-  description?: string;
+type FetchOverrides = {
+  queryLevel?: Level[];
+  queryPrice?: Price[];
+  queryFieldType?: FieldType[];
+  queryDayTime?: DayTime[];
+  queryWeekDay?: WeekDay[];
+  searchName?: string;
+  [k: string]: any;
 };
 
-const mockSessions: Session[] = [
-  {
-    id: '1',
-    name: "Futebol no Ibirapuera",
-    sport: 'Futebol',
-    location: 'Parque Ibirapuera',
-    date: '2025-11-10',
-    time: '18:00',
-    level: 'Casual',
-    participants: ['João', 'Maria', 'Pedro', 'Ana'],
-    totalSpots: 10,
-  },
-  {
-    id: '2',
-    name: "Futebol no Pacaembu",
-    sport: 'Futebol',
-    location: 'Campo do Pacaembu',
-    date: '2025-11-11',
-    time: '16:00',
-    level: 'Intermediário',
-    participants: ['Carlos', 'Julia', 'Rafael'],
-    totalSpots: 14,
-  },
-  {
-    id: '3',
-    name: "Futebol no Villa-Lobos",
-    sport: 'Futebol',
-    location: 'Parque Villa-Lobos',
-    date: '2025-11-09',
-    time: '09:00',
-    level: 'Casual',
-    participants: ['Fernanda', 'Lucas', 'Beatriz', 'Marcos', 'Camila'],
-    totalSpots: 12,
-  },
-];
+export type Session = {
+  id: string;
+  nome: string;
+  descricao: string;
+  localizacao: string;
+  dataHora: string; // ISO datetime: 2025-11-30T14:56:40.766Z
+  custoPeladeiro: number;
+  custoPrestadorServico: number;
+  vagas: number;
+  donoEvento: {
+    id: string;
+    nome: string;
+    nota: number;
+  };
+  peladeirosInscritos: {
+    id: string;
+    nome: string;
+    nota: number;
+  }[];
+  tipoCampo: string;
+  intensidade: string;
+};
 
 // Mock API URL and params 
-const distance = 50; // example distance in km
-const lat = 20; // example latitude
-const lon = 50; // example longitude
-const API_URL = process.env.API_URL || 'https://bevy-api.onrender.com';
+const distance = 20000; // example distance in km
+const lat = 200; // example latitude
+const lon = 200; // example longitude
 
-const API_SEARCH_URL = `${API_URL}/user/feed?distancia=${distance}&lat=${lat}&lon=${lon}`;
 
 export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   const router = useRouter();
   
-  const [queryLocation, setQueryLocation] = useState('');
-  const [queryDate, setQueryDate] = useState(''); // accept YYYY-MM-DD or DD/MM/YYYY
-  const [queryTime, setQueryTime] = useState(''); // HH:mm
   const [queryLevel, setQueryLevel] = useState<Level[]>([]);
   const [queryPrice, setQueryPrice] = useState<Price[]>([]);
   const [queryFieldType, setQueryFieldType] = useState<FieldType[]>([]);
   const [queryDayTime, setQueryDayTime] = useState<DayTime[]>([]);
   const [queryWeekDay, setQueryWeekDay] = useState<WeekDay[]>([]);
-  const [querySport, setQuerySport] = useState('');
   const [searchName, setSearchName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
-  const [isTimePickerVisible, setTimePickerVisible] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchName);
 
-  const results = useMemo(() => {
-    const qLoc = queryLocation.trim().toLowerCase();
-    //const qLevel = queryLevel.trim().toLowerCase();
-    const qSport = querySport.trim().toLowerCase();
-    const qName = searchName.trim().toLowerCase();
-    const qDate = queryDate.trim();
-    const qTime = queryTime.trim();
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchName);
+    }, 200); // debounce delay in ms
 
-    return mockSessions.filter((s) => {
-      if (qName && !s.name.toLowerCase().includes(qName)) return false;
-      if (qSport && !s.sport.toLowerCase().includes(qSport)) return false;
-      if (qLoc && !s.location.toLowerCase().includes(qLoc)) return false;
-      //if (qLevel && !s.level.toLowerCase().includes(qLevel)) return false;
-      if (qDate) {
-        const normalized = qDate.includes('/') ? qDate.split('/').reverse().join('-') : qDate;
-        if (!s.date.includes(normalized)) return false;
-      }
-      if (qTime && !s.time.includes(qTime)) return false;
-      return true;
-    });
-  }, [queryLocation, queryDate, queryTime, queryLevel, querySport, searchName]);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchName]);
 
+  const filteredSessions = useMemo(() => {
+    const nameLower = (debouncedSearch || '').trim().toLowerCase();
+    if(!nameLower) return sessions;
+    return sessions.filter(session => 
+      session.nome.toLowerCase().includes(nameLower)
+    );
+  }, [sessions, debouncedSearch]);
 
   // Fetch sessions from backend using available filters
-  const fetchSessions = async (extraParams?: Record<string, string | number | undefined>) => {
+  const fetchSessions = async (overrides?: FetchOverrides) => {
     setLoading(true);
     setFetchError(null);
     try {
       const params = new URLSearchParams();
-      if (searchName) params.append('nome', searchName.trim());
-      if (queryFieldType && queryFieldType.length){
-        queryFieldType.forEach(ft => params.append('tipoCampo', ft));
+      params.append('distancia', String(distance));
+      params.append('lat', String(lat));
+      params.append('lon', String(lon));
+
+      const name = overrides?.searchName !== undefined ? overrides.searchName : searchName;
+      const fieldTypes = overrides?.queryFieldType ?? queryFieldType;
+      const prices = overrides?.queryPrice ?? queryPrice;
+      const levels = overrides?.queryLevel ?? queryLevel;
+      const weekDays = overrides?.queryWeekDay ?? queryWeekDay;
+      const dayTimes = overrides?.queryDayTime ?? queryDayTime;
+
+
+      if (name) params.append('nome', name.trim());
+      if (fieldTypes && fieldTypes.length){
+        fieldTypes.forEach(ft => params.append('tipoCampo', ft));
       }
-      if (queryPrice && queryPrice.length){
-        queryPrice.forEach(p => params.append('faixaPreco', p));
+      if (prices && prices.length){
+        prices.forEach(p => params.append('faixaPreco', p));
       }
-      if (queryLevel && queryLevel.length){
-        queryLevel.forEach(l => params.append('intensidade', l));
+      if (levels && levels.length){
+        levels.forEach(l => params.append('intensidade', l));
       }
-      if (queryWeekDay && queryWeekDay.length){
-        queryWeekDay.forEach(d => params.append('diaDaSemana', d));
+      if (weekDays && weekDays.length){
+        weekDays.forEach(d => params.append('diaDaSemana', d));
       }
-      if (queryDayTime && queryDayTime.length){
-        queryDayTime.forEach(dt => params.append('periodoDoDia', dt));
+      if (dayTimes && dayTimes.length){
+        dayTimes.forEach(dt => params.append('periodoDoDia', dt));
       }
       // include any additional params provided by caller
-      if (extraParams) {
-        Object.entries(extraParams).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && String(v).length) params.append(k, String(v));
-        });
-      }
-
-      const url = `${API_SEARCH_URL}&${params.toString()}`;
-
-      //const token = await SecureStore.getItemAsync('accessToken');
-
-      const res = await fetch(url);
-
-      //if (res.status === 401) {
-        // token inválido/expirado — trate aqui (logout/refresh)
-      //  throw new Error('Não autorizado (401)');
-      //}
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await searchSessions(params);
 
       // Expecting an array of sessions from API; fall back gracefully
       if (Array.isArray(data)) setSessions(data as Session[]);
@@ -227,40 +193,35 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
     <View key={session.id} style={styles.card}>
       <View style={styles.cardHeader}>
         <View>
-          <Text style={styles.sessionSport}>{session.sport}</Text>
-          <Text style={styles.sessionLevel}>{session.level}</Text>
+          <Text style={styles.sessionSport}>{session.nome}</Text>
+          <Text style={styles.sessionLevel}>{session.intensidade}</Text>
         </View>
       </View>
 
       <View style={styles.cardBody}>
-        <Text style={styles.metaText}>{session.location}</Text>
-        <Text style={styles.metaText}>{formatLocalDate(session.date)} às {session.time}</Text>
-        <Text style={styles.metaText}>{session.participants.length} confirmados • {session.totalSpots} vagas</Text>
+        <Text style={styles.metaText}>{session.localizacao}</Text>
+        <Text style={styles.metaText}>{formatLocalDate(session.dataHora)} às {formatLocalTime(session.dataHora)}</Text>
+        <Text style={styles.metaText}>{session.peladeirosInscritos.length} confirmados • {session.vagas} vagas</Text>
       </View>
     </View>
   );
 
-  // formata uma data ISO (YYYY-MM-DD) para o timezone local sem deslocamento
-  const formatLocalDate = (iso: string) => {
-    const parts = iso.split('-');
-    if (parts.length !== 3) return iso;
-    const [y, m, d] = parts;
-    const dt = new Date(Number(y), Number(m) - 1, Number(d));
-    return dt.toLocaleDateString('pt-BR');
-  };
+const formatLocalDate = (iso: string) => {
+  if (!iso) return '';
+  // se vier com time (ISO) pega só a parte da data
+  const datePart = iso.split('T')[0];
+  const parts = datePart.split('-');
+  if (parts.length !== 3) return iso;
+  const [y, m, d] = parts;
+  const dt = new Date(Number(y), Number(m) - 1, Number(d));
+  return dt.toLocaleDateString('pt-BR');
+};
 
-  const formatDate = (d: Date) => {
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
-
-  const formatTime = (d: Date) => {
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    return `${hh}:${mm}`;
-  };
+const formatLocalTime = (iso: string) => {
+  if (!iso) return '';
+  const d = new Date(iso); // interpreta o ISO e converte para o horário local
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -421,8 +382,16 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
 
                 <View style={styles.modalFooter}>
                   <TouchableOpacity
-                    onPress={() => {
-                      setQuerySport(''); setQueryLocation(''); setQueryDate(''); setQueryTime(''); setQueryLevel([]); setSearchName('');
+                    onPress={async () => {
+                      setQueryDayTime([]); setQueryFieldType([]); setQueryPrice([]); setQueryWeekDay([]); setQueryLevel([]); setSearchName('');
+                      await fetchSessions({
+                        queryDayTime: [],
+                        queryFieldType: [],
+                        queryPrice: [],
+                        queryWeekDay: [],
+                        queryLevel: [],
+                        searchName: '',
+                      });
                       setModalVisible(false);
                     }}
                     style={[styles.modalButton, { backgroundColor: '#2A2A2A' }]}
@@ -445,37 +414,17 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Native pickers for non-web */}
-      <DateTimePickerModal
-        isVisible={isDatePickerVisible}
-        mode="date"
-        onConfirm={(date) => {
-          setQueryDate(formatDate(date));
-          setDatePickerVisible(false);
-        }}
-        onCancel={() => setDatePickerVisible(false)}
-      />
-
-      <DateTimePickerModal
-        isVisible={isTimePickerVisible}
-        mode="time"
-        is24Hour={true}
-        onConfirm={(date) => {
-          setQueryTime(formatTime(date));
-          setTimePickerVisible(false);
-        }}
-        onCancel={() => setTimePickerVisible(false)}
-      />
-
       <FlatList
         contentContainerStyle={styles.container}
-        data={sessions.length ? sessions : results}
+        data={filteredSessions}
         renderItem={({ item }) => renderCard(item)}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={() => (
           <View style={styles.emptyWrap}>
             {loading ? (
-              <Text style={styles.emptyTitle}>Carregando partidas...</Text>
+              <View style={styles.loadingOverlay} pointerEvents="box-none">
+                <ActivityIndicator size="large" color="#C7FF00" />
+              </View>
             ) : (
               <>
                 <Text style={styles.emptyIcon}>🔎</Text>
@@ -546,6 +495,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 8,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    zIndex: 10,
   },
 });
 
