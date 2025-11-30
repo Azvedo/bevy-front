@@ -1,7 +1,8 @@
+import { searchCreatedSessions, searchMySessions } from '@/services/search';
 import { useRouter } from 'expo-router';
-import { ArrowLeftIcon } from 'lucide-react-native';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -12,59 +13,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type Session = {
   id: string;
-  sport: string;
-  location: string;
-  date: string; // ISO date
-  time: string; // hh:mm
-  level: string;
-  participants: string[];
-  totalSpots: number;
-  price?: string | number;
-  description?: string;
+  nome: string;
+  descricao: string;
+  localizacao: string;
+  dataHora: string; // ISO datetime: 2025-11-30T14:56:40.766Z
+  custoPeladeiro: number;
+  custoPrestadorServico: number;
+  vagas: number;
+  donoEvento: {
+    id: string;
+    nome: string;
+    nota: number;
+  };
+  peladeirosInscritos: {
+    id: string;
+    nome: string;
+    nota: number;
+  }[];
+  tipoCampo: string;
+  intensidade: string;
 };
-
-const mockSessions: Session[] = [
-  {
-    id: '1',
-    sport: 'Futebol',
-    location: 'Parque Ibirapuera',
-    date: '2025-11-10',
-    time: '18:00',
-    level: 'Casual',
-    participants: ['João', 'Maria', 'Pedro', 'Ana'],
-    totalSpots: 10,
-  },
-  {
-    id: '2',
-    sport: 'Futebol',
-    location: 'Campo do Pacaembu',
-    date: '2025-11-11',
-    time: '16:00',
-    level: 'Intermediário',
-    participants: ['Carlos', 'Julia', 'Rafael'],
-    totalSpots: 14,
-  },
-  {
-    id: '3',
-    sport: 'Futebol',
-    location: 'Parque Villa-Lobos',
-    date: '2025-11-09',
-    time: '09:00',
-    level: 'Casual',
-    participants: ['Fernanda', 'Lucas', 'Beatriz', 'Marcos', 'Camila'],
-    totalSpots: 12,
-  },
-  {
-    id: '4',
-    sport: 'Futebol',
-    location: 'Arena Morumbi',
-    date: '2025-11-12',
-    time: '14:00',
-    level: 'Avançado',
-    participants: ['Roberto', 'Sandra'],
-    totalSpots: 16,
-  },
-];
 
 interface Props {
   onBack?: () => void;
@@ -83,15 +51,55 @@ export default function MySessionsScreen({
 }: Props) {
   const router = useRouter();
 
-  const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
+  const [sessionsCreated, setCreatedSessions] = useState<Session[]>([]);
+  const [sessionsJoined, setJoinedSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  
+
+  const fetchList = async (
+    getter: () => Promise<any>,
+    setter: React.Dispatch<React.SetStateAction<Session[]>>
+  ) => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      const data = await getter();
+      if (Array.isArray(data)) setter(data as Session[]);
+      else setter([]);
+    } catch (err: any) {
+      console.error('fetchList error', err);
+      setFetchError(err?.message || 'Erro ao buscar partidas');
+      setter([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // use the generic helper
+  const fetchCreatedSessions = () => fetchList(searchCreatedSessions, setCreatedSessions);
+  const fetchJoinedSessions = () => fetchList(searchMySessions, setJoinedSessions);
+
+  const fetchAll = async () => {
+    await Promise.all([fetchCreatedSessions(), fetchJoinedSessions()]);
+  }
+
+    useEffect(() => {
+      fetchAll();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+
+  //const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
 
   const renderSessionCard = (session: Session, isCreated = false) => {
     return (
       <View key={session.id} style={[styles.card, isCreated && styles.cardHighlight]}>
         <View style={styles.cardHeader}>
           <View>
-            <Text style={styles.sessionSport}>{session.sport}</Text>
-            <Text style={styles.sessionLevel}>{session.level}</Text>
+            <Text style={styles.sessionSport}>{session.nome}</Text>
+            <Text style={styles.sessionLevel}>{session.intensidade}</Text>
           </View>
           <View style={styles.cardActions}>
             {isCreated && onEditSession && (
@@ -114,20 +122,20 @@ export default function MySessionsScreen({
         </View>
 
         <View style={styles.cardBody}>
-          <Text style={styles.metaText}>{session.location}</Text>
+          <Text style={styles.metaText}>{session.localizacao}</Text>
           <Text style={styles.metaText}>
-            {new Date(session.date).toLocaleDateString('pt-BR')} às {session.time}
+            {new Date(session.dataHora).toLocaleDateString('pt-BR')} às {new Date(session.dataHora).toLocaleTimeString('pt-BR')}
           </Text>
           {!isCreated && (
-            <Text style={styles.metaText}>{session.participants.length} confirmados</Text>
+            <Text style={styles.metaText}>{session.peladeirosInscritos.length} confirmados</Text>
           )}
           {isCreated && (
             <Text style={styles.metaText}>
-              {session.totalSpots - session.participants.length} vagas disponíveis (de {session.totalSpots})
+              {session.vagas - session.peladeirosInscritos.length} vagas disponíveis (de {session.vagas})
             </Text>
           )}
-          {session.price && <Text style={styles.metaText}>{session.price} por pessoa</Text>}
-          {session.description && <Text style={styles.description}>{session.description}</Text>}
+          {session.custoPeladeiro && <Text style={styles.metaText}>{session.custoPeladeiro} por pessoa</Text>}
+          {session.descricao && <Text style={styles.description}>{session.descricao}</Text>}
         </View>
       </View>
     );
@@ -135,30 +143,35 @@ export default function MySessionsScreen({
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {loading ? (
+        <View style={styles.loadingOverlay} pointerEvents="box-none">
+          <ActivityIndicator size="large" color="#C7FF00" />
+        </View>
+      ) : (
       <FlatList
         contentContainerStyle={styles.container}
         data={[]}
         ListHeaderComponent={
           <View>
-            {createdSessions.length > 0 && (
+            {sessionsCreated.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Peladas Criadas</Text>
                 <Text style={styles.sectionSubtitle}>
-                  Você criou {createdSessions.length} {createdSessions.length === 1 ? 'pelada' : 'peladas'}
+                  Você criou {sessionsCreated.length} {sessionsCreated.length === 1 ? 'pelada' : 'peladas'}
                 </Text>
-                {createdSessions.map((s) => renderSessionCard(s, true))}
+                {sessionsCreated.map((s) => renderSessionCard(s, true))}
               </View>
             )}
 
-            {confirmed.length > 0 ? (
+            {sessionsJoined.length > 0 ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Sessões Confirmadas</Text>
                 <Text style={styles.sectionSubtitle}>
-                  Você tem {confirmed.length} {confirmed.length === 1 ? 'sessão confirmada' : 'sessões confirmadas'}
+                  Você tem {sessionsJoined.length} {sessionsJoined.length === 1 ? 'sessão confirmada' : 'sessões confirmadas'}
                 </Text>
-                {confirmed.map((s) => renderSessionCard(s, false))}
+                {sessionsJoined.map((s) => renderSessionCard(s, false))}
               </View>
-            ) : createdSessions.length === 0 ? (
+            ) : sessionsCreated.length === 0 ? (
               <View style={styles.emptyWrap}>
                 <Text style={styles.emptyIcon}>📅</Text>
                 <Text style={styles.emptyTitle}>Nenhuma sessão ainda</Text>
@@ -170,6 +183,7 @@ export default function MySessionsScreen({
         renderItem={null}
         keyExtractor={() => Math.random().toString()}
       />
+      )}
     </SafeAreaView>
   );
 }
@@ -201,4 +215,15 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 40, color: '#CCCCCC', marginBottom: 12 },
   emptyTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 6 },
   emptyText: { color: '#CCCCCC', textAlign: 'center', paddingHorizontal: 24 },
+  loadingOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    zIndex: 10,
+  },
 });
