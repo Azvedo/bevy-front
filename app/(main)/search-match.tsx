@@ -1,7 +1,8 @@
 import { searchSessions } from '@/services/search';
+import Slider from '@react-native-community/slider';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { Filter } from 'lucide-react-native';
+import { Filter, Radar } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -97,8 +98,10 @@ export type Session = {
   intensidade: string;
 };
 
-// Mock API URL and params 
-const distance = 20000; // example distance in km
+// Mock API URL and params
+const DEFAULT_DISTANCE = 20; // default distance in meters (20 km)
+const MAX_DISTANCE = 50; // max slider distance in meters (50 km)
+const DISTANCE_STEP = 1; // 1 km steps
 
 
 export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
@@ -117,6 +120,9 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState(searchName);
+  const [distancia, setDistancia] = useState<number>(DEFAULT_DISTANCE);
+  const [distanceModalVisible, setDistanceModalVisible] = useState(false);
+  const [tempDist, setTempDist] = useState<number>(DEFAULT_DISTANCE);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -148,7 +154,8 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
       const weekDays = overrides?.queryWeekDay ?? queryWeekDay;
       const dayTimes = overrides?.queryDayTime ?? queryDayTime;
       const params = new URLSearchParams();
-      params.append('distancia', String(distance));
+      const usedDistance = overrides?.distancia ?? distancia ?? DEFAULT_DISTANCE;
+      params.append('distancia', String(usedDistance));
       // Prefer explicit overrides (passed when location is just obtained),
       // otherwise use component state `lat`/`lon`. Do NOT fall back to a
       // placeholder like 200 — only send coords when available.
@@ -276,6 +283,16 @@ const formatLocalTime = (iso: string) => {
           style={styles.searchInput}
         />
         <TouchableOpacity
+          onPress={() => {
+            setTempDist(distancia);
+            setDistanceModalVisible(true);
+          }}
+          style={[styles.filterButton, { marginHorizontal: 6 }]}
+          accessibilityLabel="Ajustar distância"
+        >
+          <Radar color="#C7FF00" width={20} height={20} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={styles.filterButton}
           accessibilityLabel="Abrir filtros"
@@ -283,6 +300,55 @@ const formatLocalTime = (iso: string) => {
           <Filter color="#C7FF00" width={20} height={20} />
         </TouchableOpacity>
       </View>
+
+      {/* Modal de distância */}
+      <Modal visible={distanceModalVisible} transparent animationType="slide">
+        <TouchableWithoutFeedback onPress={() => setDistanceModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[styles.modalCard, { maxWidth: 420, width: '100%' }]}>
+                <Text style={styles.modalTitle}>Distância</Text>
+                <View style={{ marginBottom: 12 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Distância (km)</Text>
+                    <Text style={{ color: 'white', marginBottom: 8 }}>{(tempDist).toFixed(0)} km</Text>
+                    <Slider
+                      minimumValue={0}
+                      maximumValue={MAX_DISTANCE}
+                      step={DISTANCE_STEP}
+                      value={tempDist}
+                      onValueChange={(v) => setTempDist(Math.round(v / DISTANCE_STEP) * DISTANCE_STEP)}
+                      minimumTrackTintColor="#C7FF00"
+                      maximumTrackTintColor="#2A2A2A"
+                      thumbTintColor="#C7FF00"
+                      style={{ width: '100%', height: 40 }}
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => setDistanceModalVisible(false)}
+                    style={[styles.modalButton, { backgroundColor: '#2A2A2A', minWidth: 100 }]}
+                  >
+                    <Text style={{ color: 'white' }}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      setDistancia(tempDist);
+                      await fetchSessions({ distancia: tempDist });
+                      setDistanceModalVisible(false);
+                    }}
+                    style={[styles.modalButton, { backgroundColor: '#C7FF00', minWidth: 100 }]}
+                  >
+                    <Text style={{ color: '#121212', fontWeight: '700' }}>Aplicar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Modal de filtros */}
       <Modal visible={modalVisible} transparent animationType="slide">
@@ -549,5 +615,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     zIndex: 10,
   },
+  distButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(204,204,204,0.12)'
+  },
+  distButtonText: { color: 'white', fontSize: 18, fontWeight: '700' },
+  distTrackWrap: { flex: 1, alignItems: 'center' },
+  distTrack: { width: '100%', height: 8, backgroundColor: '#2A2A2A', borderRadius: 8, overflow: 'hidden' },
+  distFill: { height: '100%', backgroundColor: '#C7FF00' },
+  distValue: { color: 'white', marginTop: 6, fontSize: 12, textAlign: 'center' },
 });
 
