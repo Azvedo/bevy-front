@@ -16,10 +16,7 @@ import {
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SessionMap from '../../components/session-map';
-
-// URL Da API (@rafa ou quem ler, como ntinha nenhum .env coloquei aqui)
-const API_URL = 'http://localhost:8080/eventos';
-const API_TOKEN = 'SEU_TOKEN_AQUI'; // so de teste, ainda n tem auth 
+import { createEvent, CreateEventDTO } from '../../services/app'; // Importação adicionada
 
 interface Session {
     id: string;
@@ -104,16 +101,6 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
             });
         })();
     }, []);
-
-    // Função chamada ao clicar no mapa
-    const handleMapPress = (e: MapPressEvent) => {
-        const { latitude, longitude } = e.nativeEvent.coordinate;
-        setFormData(prev => ({
-            ...prev,
-            latitude,
-            longitude
-        }));
-    };
 
     const [isDatePickerVisible, setDatePickerVisible] = useState(false);
     const [isTimePickerVisible, setTimePickerVisible] = useState(false);
@@ -211,43 +198,30 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
         setIsLoading(true);
 
         try {
-            // Monta o payload conforme o curl fornecido
-            const payload = {
-                nome: `${formData.sport} - ${formData.location}`, // Gera um nome automático ou adicione um campo 'Título'
+            // Monta o payload tipado com o novo campo
+            const payload: CreateEventDTO = {
+                nome: `${formData.sport} - ${formData.location}`,
                 descricao: formData.description || `Pelada de ${formData.sport}`,
                 localizacao: formData.location,
-                dataHora: convertToISO(formData.date, formData.time),
-                custoPeladeiro: parsePrice(formData.price),
-                custoPrestadorServico: 0, // Valor padrão ou adicionar campo no form
                 latitude: formData.latitude,
                 longitude: formData.longitude,
+                dataHora: convertToISO(formData.date, formData.time),
                 intensidade: mapLevelToIntensity(formData.level),
-                tipoCampo: "SOCIETY" // Pode ser dinâmico baseado no esporte
+                tipoCampo: "SOCIETY",
+                vagas: parseInt(formData.spots) || 0, // Adicionado mapeamento de vagas
+                custoPeladeiro: parsePrice(formData.price),
+                custoPrestadorServico: 0
             };
 
             console.log('Enviando payload:', JSON.stringify(payload, null, 2));
 
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${API_TOKEN}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
+            const data = await createEvent(payload);
 
-            if (!response.ok) {
-                const errorData = await response.text(); // Tenta ler o erro como texto
-                throw new Error(`Erro na API: ${response.status} - ${errorData}`);
-            }
-
-            const data = await response.json();
             console.log('Sucesso:', data);
 
             if (onCreateSession) {
                 onCreateSession(data);
             } else {
-                // Sucesso
                 if (router.canGoBack()) {
                     router.back();
                 }
@@ -256,7 +230,6 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
             console.error(error);
             setCreateError(error.message || 'Ocorreu um erro ao criar a pelada. Verifique sua conexão.');
         } finally {
-            // Finaliza o loading independente de sucesso ou erro
             setIsLoading(false);
         }
     };
