@@ -11,6 +11,15 @@ export const saveAuthData = async (accessToken: string, refreshToken: string) =>
     }
 };
 
+export const clearAuthData = async () => {
+    try {
+        await SecureStore.deleteItemAsync('user_token');
+        await SecureStore.deleteItemAsync('user_refresh_token');
+        api.defaults.headers.Authorization = '';
+    } catch (error) {
+        console.error("Erro ao limpar tokens", error);
+    }
+};
 
 // Função para checar se o usuário já está logado ao abrir o App
 export const checkLoginStatus = async () => {

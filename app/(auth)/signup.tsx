@@ -34,12 +34,10 @@ export default function SignUp({ onLogin }: SignUpProps) {
         try {
             // Validação básica
             if (!name.trim() || !email.trim() || !phoneNumber.trim() || !password.trim()) {
-                Alert.alert('Erro', 'Por favor, preencha todos os campos.');
                 return;
             }
 
             if (password.length < 6) {
-                Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
                 return;
             }
 

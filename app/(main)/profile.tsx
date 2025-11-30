@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { clearAuthData } from '@/utils/utils';
 type UserData = {
   name: string;
   email: string;
@@ -12,6 +12,12 @@ type UserData = {
 export default function ProfilePage() {
   const router = useRouter();
   const [userData, setUserData] = useState<UserData>({ name: '', email: '' }); // Simulação de dados do usuário
+  
+  const handleLogout = async () => {
+    await clearAuthData(); // Lógica de logout, como limpar tokens, etc.
+    router.push('/'); // Redireciona para a página inicial ou de login
+  }
+  
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       
@@ -20,7 +26,7 @@ export default function ProfilePage() {
         
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => router.push('/')}
+          onPress={handleLogout}
         >
           <Text style={styles.buttonText}>Sair</Text>
         </TouchableOpacity>
