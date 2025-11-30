@@ -1,19 +1,65 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeftIcon, Filter } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import { Filter } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Modal,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+
+// type and labels
+type Level = 'leve' | 'moderado' | 'disputado';
+const LEVELS: Level[] = ['leve', 'moderado', 'disputado'];
+const LEVEL_LABELS: Record<Level, string> = { leve: 'Leve', moderado: 'Moderado', disputado: 'Disputado' };
+
+type Price = 'gratis' | '1-10' | '11-20' | '21+';
+const PRICE: Price[] = ['gratis', '1-10', '11-20', '21+'];
+const PRICE_LABELS: Record<Price, string> = {
+  gratis: 'Grátis',
+  '1-10': 'R$1 - R$10',
+  '11-20': 'R$11 - R$20',
+  '21+': 'R$21+',
+}; 
+
+type FieldType = 'society' | 'grama' | 'salao' | 'areia' | 'terra' | 'rua' | 'outros';
+const FIELD_TYPES: FieldType[] = ['society', 'grama', 'salao', 'areia', 'terra', 'rua', 'outros'];
+const FIELD_TYPE_LABELS: Record<FieldType, string> = {
+  society: 'Society',
+  grama: 'Grama',
+  salao: 'Salão',
+  areia: 'Areia',
+  terra: 'Terra',
+  rua: 'Rua',
+  outros: 'Outros',
+};
+
+type DayTime = 'manha' | 'tarde' | 'noite';
+const DAY_TIMES: DayTime[] = ['manha', 'tarde', 'noite'];
+const DAY_TIME_LABELS: Record<DayTime, string> = {
+  manha: 'Manhã',
+  tarde: 'Tarde',
+  noite: 'Noite',
+};
+
+type WeekDay = 'segunda' | 'terca' | 'quarta' | 'quinta' | 'sexta' | 'sabado' | 'domingo';
+const WEEK_DAYS: WeekDay[] = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+const WEEK_DAY_LABELS: Record<WeekDay, string> = {
+  segunda: 'Segunda',
+  terca: 'Terça',
+  quarta: 'Quarta',
+  quinta: 'Quinta',
+  sexta: 'Sexta',
+  sabado: 'Sábado',
+  domingo: 'Domingo',
+};
 
 export type Session = {
   id: string;
@@ -65,36 +111,37 @@ const mockSessions: Session[] = [
   },
 ];
 
+// Mock API URL and params 
+const distance = 50; // example distance in km
+const lat = 20; // example latitude
+const lon = 50; // example longitude
+const API_URL = process.env.API_URL || 'https://bevy-api.onrender.com';
+
+const API_SEARCH_URL = `${API_URL}/user/feed?distancia=${distance}&lat=${lat}&lon=${lon}`;
+
 export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   const router = useRouter();
   
-  // máscara simples para DD/MM/AAAA enquanto digita
-  const maskDateInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0,2)}/${digits.slice(2)}`;
-    return `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
-  };
-
-  // máscara simples para HH:MM enquanto digita
-  const maskTimeInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 4);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0,2)}:${digits.slice(2)}`;
-  };
   const [queryLocation, setQueryLocation] = useState('');
   const [queryDate, setQueryDate] = useState(''); // accept YYYY-MM-DD or DD/MM/YYYY
   const [queryTime, setQueryTime] = useState(''); // HH:mm
-  const [queryLevel, setQueryLevel] = useState('');
+  const [queryLevel, setQueryLevel] = useState<Level[]>([]);
+  const [queryPrice, setQueryPrice] = useState<Price[]>([]);
+  const [queryFieldType, setQueryFieldType] = useState<FieldType[]>([]);
+  const [queryDayTime, setQueryDayTime] = useState<DayTime[]>([]);
+  const [queryWeekDay, setQueryWeekDay] = useState<WeekDay[]>([]);
   const [querySport, setQuerySport] = useState('');
   const [searchName, setSearchName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const results = useMemo(() => {
     const qLoc = queryLocation.trim().toLowerCase();
-    const qLevel = queryLevel.trim().toLowerCase();
+    //const qLevel = queryLevel.trim().toLowerCase();
     const qSport = querySport.trim().toLowerCase();
     const qName = searchName.trim().toLowerCase();
     const qDate = queryDate.trim();
@@ -104,7 +151,7 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
       if (qName && !s.name.toLowerCase().includes(qName)) return false;
       if (qSport && !s.sport.toLowerCase().includes(qSport)) return false;
       if (qLoc && !s.location.toLowerCase().includes(qLoc)) return false;
-      if (qLevel && !s.level.toLowerCase().includes(qLevel)) return false;
+      //if (qLevel && !s.level.toLowerCase().includes(qLevel)) return false;
       if (qDate) {
         const normalized = qDate.includes('/') ? qDate.split('/').reverse().join('-') : qDate;
         if (!s.date.includes(normalized)) return false;
@@ -113,6 +160,68 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
       return true;
     });
   }, [queryLocation, queryDate, queryTime, queryLevel, querySport, searchName]);
+
+
+  // Fetch sessions from backend using available filters
+  const fetchSessions = async (extraParams?: Record<string, string | number | undefined>) => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const params = new URLSearchParams();
+      if (searchName) params.append('nome', searchName.trim());
+      if (queryFieldType && queryFieldType.length){
+        queryFieldType.forEach(ft => params.append('tipoCampo', ft));
+      }
+      if (queryPrice && queryPrice.length){
+        queryPrice.forEach(p => params.append('faixaPreco', p));
+      }
+      if (queryLevel && queryLevel.length){
+        queryLevel.forEach(l => params.append('intensidade', l));
+      }
+      if (queryWeekDay && queryWeekDay.length){
+        queryWeekDay.forEach(d => params.append('diaDaSemana', d));
+      }
+      if (queryDayTime && queryDayTime.length){
+        queryDayTime.forEach(dt => params.append('periodoDoDia', dt));
+      }
+      // include any additional params provided by caller
+      if (extraParams) {
+        Object.entries(extraParams).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && String(v).length) params.append(k, String(v));
+        });
+      }
+
+      const url = `${API_SEARCH_URL}&${params.toString()}`;
+
+      //const token = await SecureStore.getItemAsync('accessToken');
+
+      const res = await fetch(url);
+
+      //if (res.status === 401) {
+        // token inválido/expirado — trate aqui (logout/refresh)
+      //  throw new Error('Não autorizado (401)');
+      //}
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      // Expecting an array of sessions from API; fall back gracefully
+      if (Array.isArray(data)) setSessions(data as Session[]);
+      else setSessions([]);
+    } catch (err: any) {
+      console.error('fetchSessions error', err);
+      setFetchError(err?.message || 'Erro ao buscar partidas');
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load initial sessions on mount
+  useEffect(() => {
+    fetchSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const renderCard = (session: Session) => (
     <View key={session.id} style={styles.card}>
@@ -179,94 +288,152 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
             <TouchableWithoutFeedback onPress={() => {}}>
               <View style={styles.modalCard}>
                 <Text style={styles.modalTitle}>Filtros</Text>
-                <TextInput
-                  placeholder="Esporte"
-                  placeholderTextColor="rgba(204,204,204,0.5)"
-                  value={querySport}
-                  onChangeText={setQuerySport}
-                  style={{ ...styles.input, marginBottom: 8 }}
-                />
-                <TextInput
-                  placeholder="Local"
-                  placeholderTextColor="rgba(204,204,204,0.5)"
-                  value={queryLocation}
-                  onChangeText={setQueryLocation}
-                  style={{ ...styles.input, marginBottom: 8 }}
-                />
-                {Platform.OS === 'web' ? (
-                  <TextInput
-                    placeholder="Data (DD/MM/AAAA)"
-                    placeholderTextColor="rgba(204,204,204,0.5)"
-                    value={queryDate}
-                    onChangeText={(text) => setQueryDate(maskDateInput(text))}
-                    keyboardType="number-pad"
-                    style={{ ...styles.input, marginBottom: 8 }}
-                  />
-                ) : (
-                  <>
-                  <TouchableOpacity
-                    onPress={() => setDatePickerVisible(true)}
-                    style={{ ...styles.input, justifyContent: 'center', height: 44, marginBottom: 8 }}
-                  >
-                    <Text style={{ color: queryDate ? 'white' : 'rgba(204,204,204,0.5)' }}>
-                      {queryDate || 'DD/MM/AAAA'}
-                    </Text>
-                  </TouchableOpacity>
 
-                  <DateTimePickerModal
-                    isVisible={isDatePickerVisible}
-                    mode="date"
-                    onConfirm={(date) => {
-                      setQueryDate(formatDate(date));
-                      setDatePickerVisible(false);
-                    }}
-                    onCancel={() => setDatePickerVisible(false)}
-                  />
-                  </>
-                )}
+                {/* Dia da semana */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Dia da Semana</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {WEEK_DAYS.map((weekDay) => {
+                        const active = queryWeekDay.includes(weekDay);
+                        return (
+                          <TouchableOpacity
+                            key={weekDay}
+                            onPress={() => 
+                              setQueryWeekDay(prev => prev.includes(weekDay) ? prev.filter(p => p !== weekDay) : [...prev, weekDay])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{WEEK_DAY_LABELS[weekDay]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
 
-                {Platform.OS === 'web' ? (
-                  <TextInput
-                    placeholder="Hora (HH:MM)"
-                    placeholderTextColor="rgba(204,204,204,0.5)"
-                    value={queryTime}
-                    onChangeText={(text) => setQueryTime(maskTimeInput(text))}
-                    keyboardType="number-pad"
-                    style={{ ...styles.input, marginBottom: 12 }}
-                  />
-                ) : (
-                  <>
-                  <TouchableOpacity
-                    onPress={() => setTimePickerVisible(true)}
-                    style={{ ...styles.input, justifyContent: 'center', height: 44, marginBottom: 12 }}
-                  >
-                    <Text style={{ color: queryTime ? 'white' : 'rgba(204,204,204,0.5)' }}>
-                      {queryTime || 'HH:MM'}
-                    </Text>
-                  </TouchableOpacity>
+                {/* Periodo do Dia */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Período do Dia</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {DAY_TIMES.map((dayTime) => {
+                        const active = queryDayTime.includes(dayTime);
+                        return (
+                          <TouchableOpacity
+                            key={dayTime}
+                            onPress={() => 
+                              setQueryDayTime(prev => prev.includes(dayTime) ? prev.filter(p => p !== dayTime) : [...prev, dayTime])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{DAY_TIME_LABELS[dayTime]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
 
-                  <DateTimePickerModal
-                    isVisible={isTimePickerVisible}
-                    mode="time"
-                    is24Hour={true}
-                    onConfirm={(date) => {
-                      setQueryTime(formatTime(date));
-                      setTimePickerVisible(false);
-                    }}
-                    onCancel={() => setTimePickerVisible(false)}
-                  />
-                  </>
-                )}
+                {/* Tipo do Campo */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Tipo do Campo</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {FIELD_TYPES.map((fieldType) => {
+                        const active = queryFieldType.includes(fieldType);
+                        return (
+                          <TouchableOpacity
+                            key={fieldType}
+                            onPress={() => 
+                              setQueryFieldType(prev => prev.includes(fieldType) ? prev.filter(p => p !== fieldType) : [...prev, fieldType])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{FIELD_TYPE_LABELS[fieldType]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Faixa de Preço */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Faixa de Preço</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {PRICE.map((price) => {
+                        const active = queryPrice.includes(price);
+                        return (
+                          <TouchableOpacity
+                            key={price}
+                            onPress={() => 
+                              setQueryPrice(prev => prev.includes(price) ? prev.filter(p => p !== price) : [...prev, price])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{PRICE_LABELS[price]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Intensidade */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Intensidade</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {LEVELS.map((lvl) => {
+                        const active = queryLevel.includes(lvl);
+                        return (
+                          <TouchableOpacity
+                            key={lvl}
+                            onPress={() => 
+                              setQueryLevel(prev => prev.includes(lvl) ? prev.filter(p => p !== lvl) : [...prev, lvl])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{LEVEL_LABELS[lvl]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
 
                 <View style={styles.modalFooter}>
                   <TouchableOpacity
-                    onPress={() => { setQuerySport(''); setQueryLocation(''); setQueryDate(''); setQueryTime(''); setQueryLevel(''); setSearchName(''); setModalVisible(false); }}
+                    onPress={() => {
+                      setQuerySport(''); setQueryLocation(''); setQueryDate(''); setQueryTime(''); setQueryLevel([]); setSearchName('');
+                      setModalVisible(false);
+                    }}
                     style={[styles.modalButton, { backgroundColor: '#2A2A2A' }]}
                   >
                     <Text style={{ color: 'white' }}>Limpar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setModalVisible(false)}
+                    onPress={async () => {
+                      await fetchSessions();
+                      setModalVisible(false);
+                    }}
                     style={[styles.modalButton, { backgroundColor: '#C7FF00' }]}
                   >
                     <Text style={{ color: '#121212', fontWeight: '700' }}>Aplicar</Text>
@@ -302,14 +469,20 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
 
       <FlatList
         contentContainerStyle={styles.container}
-        data={results}
+        data={sessions.length ? sessions : results}
         renderItem={({ item }) => renderCard(item)}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={() => (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyIcon}>🔎</Text>
-            <Text style={styles.emptyTitle}>Nenhuma partida encontrada</Text>
-            <Text style={styles.emptyText}>Ajuste os filtros para encontrar partidas próximas.</Text>
+            {loading ? (
+              <Text style={styles.emptyTitle}>Carregando partidas...</Text>
+            ) : (
+              <>
+                <Text style={styles.emptyIcon}>🔎</Text>
+                <Text style={styles.emptyTitle}>Nenhuma partida encontrada</Text>
+                <Text style={styles.emptyText}>Ajuste os filtros para encontrar partidas próximas.</Text>
+              </>
+            )}
           </View>
         )}
       />
@@ -347,5 +520,32 @@ const styles = StyleSheet.create({
   modalTitle: { color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 12 },
   modalFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginHorizontal: 4 },
+  levelChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: '#2A2A2A',
+    borderWidth: 1,
+    borderColor: 'rgba(204,204,204,0.08)'
+  },
+  levelChipActive: {
+    backgroundColor: '#C7FF00',
+    borderColor: '#C7FF00'
+  },
+  levelChipText: { color: 'white' },
+  levelChipTextActive: { color: '#121212', fontWeight: '700' },
+  filterCard: {
+    padding: 12,
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: 'rgba(204,204,204,0.2)',
+    borderRadius: 12,
+  },
+  filterLabel: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
 });
 
