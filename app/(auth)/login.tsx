@@ -12,6 +12,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { loginUser } from "@/services/auth";
+import { saveAuthData } from "@/utils/utils";
 
 interface LoginPageProps {
     onLogin?: () => void;
@@ -26,11 +28,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
     const router = useRouter();
 
-    const handleSubmit = () => {
-        // aqui você adicionaria validação / chamada de API
-        onLogin && onLogin();
-        router.replace("/(main)/home");
-
+    const handleSubmit = async() => {
+        try {
+            // Validação básica
+            if (!email.trim() || !password.trim()) {
+                return;
+            }
+            const response = await loginUser(email.trim().toLowerCase(),password);
+            await saveAuthData(response.accessToken, response.refreshToken);
+            router.replace("/(main)/home");
+        } catch (error) {
+            console.error("Erro ao fazer login:", error);
+            return;
+        }
     };
 
     return (

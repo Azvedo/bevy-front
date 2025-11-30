@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
+import { checkLoginStatus } from "@/utils/utils";
 // Ajuste o caminho/nome do logo conforme seu projeto
 const logo = require("../../assets/images/image.png");
 
@@ -11,8 +11,13 @@ export default function AuthIndex() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const onContinue = () => {
-    router.replace("/login");
+  const onContinue = async () => {
+    const isLoggedIn = await checkLoginStatus();
+    if (isLoggedIn) {
+      router.replace("/(main)/home");
+    } else {
+      router.replace("/login");
+    }
   }
 
   return (
