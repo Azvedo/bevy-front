@@ -1,4 +1,5 @@
 import { searchSessions } from '@/services/search';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { Filter } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -6,6 +7,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -97,8 +99,6 @@ export type Session = {
 
 // Mock API URL and params 
 const distance = 20000; // example distance in km
-const lat = 200; // example latitude
-const lon = 200; // example longitude
 
 
 export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
@@ -114,6 +114,8 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lon, setLon] = useState<number | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState(searchName);
 
   useEffect(() => {
@@ -135,40 +137,35 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   }, [sessions, debouncedSearch]);
 
   // Fetch sessions from backend using available filters
-  const fetchSessions = async (overrides?: FetchOverrides) => {
+  const fetchSessions = async (overrides?: FetchOverrides & { lat?: number | null; lon?: number | null }) => {
     setLoading(true);
     setFetchError(null);
     try {
-      const params = new URLSearchParams();
-      params.append('distancia', String(distance));
-      params.append('lat', String(lat));
-      params.append('lon', String(lon));
-
       const name = overrides?.searchName !== undefined ? overrides.searchName : searchName;
       const fieldTypes = overrides?.queryFieldType ?? queryFieldType;
       const prices = overrides?.queryPrice ?? queryPrice;
       const levels = overrides?.queryLevel ?? queryLevel;
       const weekDays = overrides?.queryWeekDay ?? queryWeekDay;
       const dayTimes = overrides?.queryDayTime ?? queryDayTime;
-
+      const params = new URLSearchParams();
+      params.append('distancia', String(distance));
+      // Prefer explicit overrides (passed when location is just obtained),
+      // otherwise use component state `lat`/`lon`. Do NOT fall back to a
+      // placeholder like 200 — only send coords when available.
+      const usedLat = overrides?.lat ?? (lat ?? 200);
+      const usedLon = overrides?.lon ?? (lon ?? 200);
+      if (usedLat != null) params.append('lat', String(usedLat));
+      if (usedLon != null) params.append('lon', String(usedLon));
+      console.log('Fetching sessions with lat/lon:', usedLat, usedLon);
 
       if (name) params.append('nome', name.trim());
-      if (fieldTypes && fieldTypes.length){
-        fieldTypes.forEach(ft => params.append('tipoCampo', ft));
-      }
-      if (prices && prices.length){
-        prices.forEach(p => params.append('faixaPreco', p));
-      }
-      if (levels && levels.length){
-        levels.forEach(l => params.append('intensidade', l));
-      }
-      if (weekDays && weekDays.length){
-        weekDays.forEach(d => params.append('diaDaSemana', d));
-      }
-      if (dayTimes && dayTimes.length){
-        dayTimes.forEach(dt => params.append('periodoDoDia', dt));
-      }
-      // include any additional params provided by caller
+      if (fieldTypes && fieldTypes.length) fieldTypes.forEach(ft => params.append('tipoCampo', ft));
+      if (prices && prices.length) prices.forEach(p => params.append('faixaPreco', p));
+      if (levels && levels.length) levels.forEach(l => params.append('intensidade', l));
+      if (weekDays && weekDays.length) weekDays.forEach(d => params.append('diaDaSemana', d));
+      if (dayTimes && dayTimes.length) dayTimes.forEach(dt => params.append('periodoDoDia', dt));
+
+
       const data = await searchSessions(params);
 
       // Expecting an array of sessions from API; fall back gracefully
@@ -187,6 +184,51 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     fetchSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // request location once on mount (sets lat/lon)
+  useEffect(() => {
+    const requestAndGetLocation = async () => {
+      try {
+        if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const platLat = pos.coords.latitude;
+              const platLon = pos.coords.longitude;
+              setLat(platLat);
+              setLon(platLon);
+              console.log('Got web geolocation', platLat, platLon);
+              // Trigger a re-fetch using the real coordinates we just obtained
+              fetchSessions({ lat: platLat, lon: platLon });
+            },
+            (err) => {
+              console.warn('geolocation error', err);
+            },
+            { enableHighAccuracy: true, timeout: 30000, maximumAge: 30000 }
+          );
+          return;
+        }
+
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.warn('Location permission not granted');
+          fetchSessions({ lat: 200, lon: 200 }); // use placeholder coords if permission denied
+          return;
+        }
+
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const nativeLat = pos.coords.latitude;
+        const nativeLon = pos.coords.longitude;
+        setLat(nativeLat);
+        setLon(nativeLon);
+        // Trigger a re-fetch using the real coordinates we just obtained
+        fetchSessions({ lat: nativeLat, lon: nativeLon });
+      } catch (e) {
+        console.warn('requestAndGetLocation error', e);
+      }
+    };
+
+    requestAndGetLocation();
   }, []);
 
   const renderCard = (session: Session) => (
