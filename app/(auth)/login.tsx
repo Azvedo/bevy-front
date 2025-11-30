@@ -36,7 +36,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             }
             const response = await loginUser(email.trim().toLowerCase(),password);
             await saveAuthData(response.accessToken, response.refreshToken);
-            console.log("Usuário logado com sucesso:", response);
             router.replace("/(main)/home");
         } catch (error) {
             console.error("Erro ao fazer login:", error);
