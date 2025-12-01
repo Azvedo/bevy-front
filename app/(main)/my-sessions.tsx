@@ -155,7 +155,7 @@ export default function MySessionsScreen({
             </Text>
           )}
 
-          {session.custoPeladeiro && (
+          {!!session.custoPeladeiro && (
             <Text style={styles.metaText}>
               R$ {session.custoPeladeiro} por pessoa
             </Text>
