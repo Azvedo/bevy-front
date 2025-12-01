@@ -1,7 +1,11 @@
+import { searchSessions } from '@/services/search';
+import Slider from '@react-native-community/slider';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { ArrowLeftIcon, Filter } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import { Filter, Radar } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Platform,
@@ -10,148 +14,262 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+
+// type and labels
+type Level = 'leve' | 'moderado' | 'disputado';
+const LEVELS: Level[] = ['leve', 'moderado', 'disputado'];
+const LEVEL_LABELS: Record<Level, string> = { leve: 'Leve', moderado: 'Moderado', disputado: 'Disputado' };
+
+type Price = 'gratis' | '1-10' | '11-20' | '21+';
+const PRICE: Price[] = ['gratis', '1-10', '11-20', '21+'];
+const PRICE_LABELS: Record<Price, string> = {
+  gratis: 'Grátis',
+  '1-10': 'R$1 - R$10',
+  '11-20': 'R$11 - R$20',
+  '21+': 'R$21+',
+}; 
+
+type FieldType = 'society' | 'grama' | 'salao' | 'areia' | 'terra' | 'rua' | 'outros';
+const FIELD_TYPES: FieldType[] = ['society', 'grama', 'salao', 'areia', 'terra', 'rua', 'outros'];
+const FIELD_TYPE_LABELS: Record<FieldType, string> = {
+  society: 'Society',
+  grama: 'Grama',
+  salao: 'Salão',
+  areia: 'Areia',
+  terra: 'Terra',
+  rua: 'Rua',
+  outros: 'Outros',
+};
+
+type DayTime = 'manha' | 'tarde' | 'noite';
+const DAY_TIMES: DayTime[] = ['manha', 'tarde', 'noite'];
+const DAY_TIME_LABELS: Record<DayTime, string> = {
+  manha: 'Manhã',
+  tarde: 'Tarde',
+  noite: 'Noite',
+};
+
+type WeekDay = 'segunda' | 'terca' | 'quarta' | 'quinta' | 'sexta' | 'sabado' | 'domingo';
+const WEEK_DAYS: WeekDay[] = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+const WEEK_DAY_LABELS: Record<WeekDay, string> = {
+  segunda: 'Segunda',
+  terca: 'Terça',
+  quarta: 'Quarta',
+  quinta: 'Quinta',
+  sexta: 'Sexta',
+  sabado: 'Sábado',
+  domingo: 'Domingo',
+};
+
+type FetchOverrides = {
+  queryLevel?: Level[];
+  queryPrice?: Price[];
+  queryFieldType?: FieldType[];
+  queryDayTime?: DayTime[];
+  queryWeekDay?: WeekDay[];
+  searchName?: string;
+  [k: string]: any;
+};
 
 export type Session = {
   id: string;
-  name: string;
-  sport: string;
-  location: string;
-  date: string; // ISO date
-  time: string; // hh:mm
-  level: string;
-  participants: string[];
-  totalSpots: number;
-  price?: string | number;
-  description?: string;
+  nome: string;
+  descricao: string;
+  localizacao: string;
+  dataHora: string; // ISO datetime: 2025-11-30T14:56:40.766Z
+  custoPeladeiro: number;
+  custoPrestadorServico: number;
+  vagas: number;
+  donoEvento: {
+    id: string;
+    nome: string;
+    nota: number;
+  };
+  peladeirosInscritos: {
+    id: string;
+    nome: string;
+    nota: number;
+  }[];
+  tipoCampo: string;
+  intensidade: string;
 };
 
-const mockSessions: Session[] = [
-  {
-    id: '1',
-    name: "Futebol no Ibirapuera",
-    sport: 'Futebol',
-    location: 'Parque Ibirapuera',
-    date: '2025-11-10',
-    time: '18:00',
-    level: 'Casual',
-    participants: ['João', 'Maria', 'Pedro', 'Ana'],
-    totalSpots: 10,
-  },
-  {
-    id: '2',
-    name: "Futebol no Pacaembu",
-    sport: 'Futebol',
-    location: 'Campo do Pacaembu',
-    date: '2025-11-11',
-    time: '16:00',
-    level: 'Intermediário',
-    participants: ['Carlos', 'Julia', 'Rafael'],
-    totalSpots: 14,
-  },
-  {
-    id: '3',
-    name: "Futebol no Villa-Lobos",
-    sport: 'Futebol',
-    location: 'Parque Villa-Lobos',
-    date: '2025-11-09',
-    time: '09:00',
-    level: 'Casual',
-    participants: ['Fernanda', 'Lucas', 'Beatriz', 'Marcos', 'Camila'],
-    totalSpots: 12,
-  },
-];
+const DEFAULT_DISTANCE = 20000; // default distance
+const MAX_DISTANCE = 50000; // max slider distance 
+const DISTANCE_STEP = 1000; // 1 step
+
 
 export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   const router = useRouter();
   
-  // máscara simples para DD/MM/AAAA enquanto digita
-  const maskDateInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0,2)}/${digits.slice(2)}`;
-    return `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
-  };
-
-  // máscara simples para HH:MM enquanto digita
-  const maskTimeInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 4);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0,2)}:${digits.slice(2)}`;
-  };
-  const [queryLocation, setQueryLocation] = useState('');
-  const [queryDate, setQueryDate] = useState(''); // accept YYYY-MM-DD or DD/MM/YYYY
-  const [queryTime, setQueryTime] = useState(''); // HH:mm
-  const [queryLevel, setQueryLevel] = useState('');
-  const [querySport, setQuerySport] = useState('');
+  const [queryLevel, setQueryLevel] = useState<Level[]>([]);
+  const [queryPrice, setQueryPrice] = useState<Price[]>([]);
+  const [queryFieldType, setQueryFieldType] = useState<FieldType[]>([]);
+  const [queryDayTime, setQueryDayTime] = useState<DayTime[]>([]);
+  const [queryWeekDay, setQueryWeekDay] = useState<WeekDay[]>([]);
   const [searchName, setSearchName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
-  const [isTimePickerVisible, setTimePickerVisible] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lon, setLon] = useState<number | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchName);
+  const [distancia, setDistancia] = useState<number>(DEFAULT_DISTANCE);
+  const [distanceModalVisible, setDistanceModalVisible] = useState(false);
+  const [tempDist, setTempDist] = useState<number>(DEFAULT_DISTANCE);
 
-  const results = useMemo(() => {
-    const qLoc = queryLocation.trim().toLowerCase();
-    const qLevel = queryLevel.trim().toLowerCase();
-    const qSport = querySport.trim().toLowerCase();
-    const qName = searchName.trim().toLowerCase();
-    const qDate = queryDate.trim();
-    const qTime = queryTime.trim();
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchName);
+    }, 200); // debounce delay in ms
 
-    return mockSessions.filter((s) => {
-      if (qName && !s.name.toLowerCase().includes(qName)) return false;
-      if (qSport && !s.sport.toLowerCase().includes(qSport)) return false;
-      if (qLoc && !s.location.toLowerCase().includes(qLoc)) return false;
-      if (qLevel && !s.level.toLowerCase().includes(qLevel)) return false;
-      if (qDate) {
-        const normalized = qDate.includes('/') ? qDate.split('/').reverse().join('-') : qDate;
-        if (!s.date.includes(normalized)) return false;
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchName]);
+
+  const filteredSessions = useMemo(() => {
+    const nameLower = (debouncedSearch || '').trim().toLowerCase();
+    if(!nameLower) return sessions;
+    return sessions.filter(session => 
+      session.nome.toLowerCase().includes(nameLower)
+    );
+  }, [sessions, debouncedSearch]);
+
+  // Fetch sessions from backend using available filters
+  const fetchSessions = async (overrides?: FetchOverrides & { lat?: number | null; lon?: number | null }) => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const name = overrides?.searchName !== undefined ? overrides.searchName : searchName;
+      const fieldTypes = overrides?.queryFieldType ?? queryFieldType;
+      const prices = overrides?.queryPrice ?? queryPrice;
+      const levels = overrides?.queryLevel ?? queryLevel;
+      const weekDays = overrides?.queryWeekDay ?? queryWeekDay;
+      const dayTimes = overrides?.queryDayTime ?? queryDayTime;
+      const params = new URLSearchParams();
+      const usedDistance = overrides?.distancia ?? distancia ?? DEFAULT_DISTANCE;
+      params.append('distancia', String(usedDistance));
+      // Prefer explicit overrides (passed when location is just obtained),
+      // otherwise use component state `lat`/`lon`. Do NOT fall back to a
+      // placeholder like 200 — only send coords when available.
+      const usedLat = overrides?.lat ?? (lat ?? 200);
+      const usedLon = overrides?.lon ?? (lon ?? 200);
+      if (usedLat != null) params.append('lat', String(usedLat));
+      if (usedLon != null) params.append('lon', String(usedLon));
+      console.log('Fetching sessions with lat/lon:', usedLat, usedLon);
+
+      if (name) params.append('nome', name.trim());
+      if (fieldTypes && fieldTypes.length) fieldTypes.forEach(ft => params.append('tipoCampo', ft));
+      if (prices && prices.length) prices.forEach(p => params.append('faixaPreco', p));
+      if (levels && levels.length) levels.forEach(l => params.append('intensidade', l));
+      if (weekDays && weekDays.length) weekDays.forEach(d => params.append('diaDaSemana', d));
+      if (dayTimes && dayTimes.length) dayTimes.forEach(dt => params.append('periodoDoDia', dt));
+
+
+      const data = await searchSessions(params);
+
+      // Expecting an array of sessions from API; fall back gracefully
+      if (Array.isArray(data)) setSessions(data as Session[]);
+      else setSessions([]);
+    } catch (err: any) {
+      console.error('fetchSessions error', err);
+      setFetchError(err?.message || 'Erro ao buscar partidas');
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load initial sessions on mount
+  useEffect(() => {
+    fetchSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // request location once on mount (sets lat/lon)
+  useEffect(() => {
+    const requestAndGetLocation = async () => {
+      try {
+        if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const platLat = pos.coords.latitude;
+              const platLon = pos.coords.longitude;
+              setLat(platLat);
+              setLon(platLon);
+              console.log('Got web geolocation', platLat, platLon);
+              // Trigger a re-fetch using the real coordinates we just obtained
+              fetchSessions({ lat: platLat, lon: platLon });
+            },
+            (err) => {
+              console.warn('geolocation error', err);
+            },
+            { enableHighAccuracy: true, timeout: 30000, maximumAge: 30000 }
+          );
+          return;
+        }
+
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.warn('Location permission not granted');
+          fetchSessions({ lat: 200, lon: 200 }); // use placeholder coords if permission denied
+          return;
+        }
+
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const nativeLat = pos.coords.latitude;
+        const nativeLon = pos.coords.longitude;
+        setLat(nativeLat);
+        setLon(nativeLon);
+        // Trigger a re-fetch using the real coordinates we just obtained
+        fetchSessions({ lat: nativeLat, lon: nativeLon });
+      } catch (e) {
+        console.warn('requestAndGetLocation error', e);
       }
-      if (qTime && !s.time.includes(qTime)) return false;
-      return true;
-    });
-  }, [queryLocation, queryDate, queryTime, queryLevel, querySport, searchName]);
+    };
+
+    requestAndGetLocation();
+  }, []);
 
   const renderCard = (session: Session) => (
     <View key={session.id} style={styles.card}>
       <View style={styles.cardHeader}>
         <View>
-          <Text style={styles.sessionSport}>{session.sport}</Text>
-          <Text style={styles.sessionLevel}>{session.level}</Text>
+          <Text style={styles.sessionSport}>{session.nome}</Text>
+          <Text style={styles.sessionLevel}>{session.intensidade}</Text>
         </View>
       </View>
 
       <View style={styles.cardBody}>
-        <Text style={styles.metaText}>{session.location}</Text>
-        <Text style={styles.metaText}>{formatLocalDate(session.date)} às {session.time}</Text>
-        <Text style={styles.metaText}>{session.participants.length} confirmados • {session.totalSpots} vagas</Text>
+        <Text style={styles.metaText}>{session.localizacao}</Text>
+        <Text style={styles.metaText}>{formatLocalDate(session.dataHora)} às {formatLocalTime(session.dataHora)}</Text>
+        <Text style={styles.metaText}>{session.peladeirosInscritos.length} confirmados • {session.vagas} vagas</Text>
       </View>
     </View>
   );
 
-  // formata uma data ISO (YYYY-MM-DD) para o timezone local sem deslocamento
-  const formatLocalDate = (iso: string) => {
-    const parts = iso.split('-');
-    if (parts.length !== 3) return iso;
-    const [y, m, d] = parts;
-    const dt = new Date(Number(y), Number(m) - 1, Number(d));
-    return dt.toLocaleDateString('pt-BR');
-  };
+const formatLocalDate = (iso: string) => {
+  if (!iso) return '';
+  // se vier com time (ISO) pega só a parte da data
+  const datePart = iso.split('T')[0];
+  const parts = datePart.split('-');
+  if (parts.length !== 3) return iso;
+  const [y, m, d] = parts;
+  const dt = new Date(Number(y), Number(m) - 1, Number(d));
+  return dt.toLocaleDateString('pt-BR');
+};
 
-  const formatDate = (d: Date) => {
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
-
-  const formatTime = (d: Date) => {
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    return `${hh}:${mm}`;
-  };
+const formatLocalTime = (iso: string) => {
+  if (!iso) return '';
+  const d = new Date(iso); // interpreta o ISO e converte para o horário local
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -164,6 +282,16 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
           style={styles.searchInput}
         />
         <TouchableOpacity
+          onPress={() => {
+            setTempDist(distancia);
+            setDistanceModalVisible(true);
+          }}
+          style={[styles.filterButton, { marginHorizontal: 6 }]}
+          accessibilityLabel="Ajustar distância"
+        >
+          <Radar color="#C7FF00" width={20} height={20} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={styles.filterButton}
           accessibilityLabel="Abrir filtros"
@@ -172,6 +300,55 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
         </TouchableOpacity>
       </View>
 
+      {/* Modal de distância */}
+      <Modal visible={distanceModalVisible} transparent animationType="slide">
+        <TouchableWithoutFeedback onPress={() => setDistanceModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[styles.modalCard, { maxWidth: 420, width: '100%' }]}>
+                <Text style={styles.modalTitle}>Distância</Text>
+                <View style={{ marginBottom: 12 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Distância (km)</Text>
+                    <Text style={{ color: 'white', marginBottom: 8 }}>{(tempDist/1000).toFixed(0)} km</Text>
+                    <Slider
+                      minimumValue={0}
+                      maximumValue={MAX_DISTANCE}
+                      step={DISTANCE_STEP}
+                      value={tempDist}
+                      onValueChange={(v) => setTempDist(Math.round(v / DISTANCE_STEP) * DISTANCE_STEP)}
+                      minimumTrackTintColor="#C7FF00"
+                      maximumTrackTintColor="#2A2A2A"
+                      thumbTintColor="#C7FF00"
+                      style={{ width: '100%', height: 40 }}
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => setDistanceModalVisible(false)}
+                    style={[styles.modalButton, { backgroundColor: '#2A2A2A', minWidth: 100 }]}
+                  >
+                    <Text style={{ color: 'white' }}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      setDistancia(tempDist);
+                      await fetchSessions({ distancia: tempDist });
+                      setDistanceModalVisible(false);
+                    }}
+                    style={[styles.modalButton, { backgroundColor: '#C7FF00', minWidth: 100 }]}
+                  >
+                    <Text style={{ color: '#121212', fontWeight: '700' }}>Aplicar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
       {/* Modal de filtros */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
@@ -179,94 +356,160 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
             <TouchableWithoutFeedback onPress={() => {}}>
               <View style={styles.modalCard}>
                 <Text style={styles.modalTitle}>Filtros</Text>
-                <TextInput
-                  placeholder="Esporte"
-                  placeholderTextColor="rgba(204,204,204,0.5)"
-                  value={querySport}
-                  onChangeText={setQuerySport}
-                  style={{ ...styles.input, marginBottom: 8 }}
-                />
-                <TextInput
-                  placeholder="Local"
-                  placeholderTextColor="rgba(204,204,204,0.5)"
-                  value={queryLocation}
-                  onChangeText={setQueryLocation}
-                  style={{ ...styles.input, marginBottom: 8 }}
-                />
-                {Platform.OS === 'web' ? (
-                  <TextInput
-                    placeholder="Data (DD/MM/AAAA)"
-                    placeholderTextColor="rgba(204,204,204,0.5)"
-                    value={queryDate}
-                    onChangeText={(text) => setQueryDate(maskDateInput(text))}
-                    keyboardType="number-pad"
-                    style={{ ...styles.input, marginBottom: 8 }}
-                  />
-                ) : (
-                  <>
-                  <TouchableOpacity
-                    onPress={() => setDatePickerVisible(true)}
-                    style={{ ...styles.input, justifyContent: 'center', height: 44, marginBottom: 8 }}
-                  >
-                    <Text style={{ color: queryDate ? 'white' : 'rgba(204,204,204,0.5)' }}>
-                      {queryDate || 'DD/MM/AAAA'}
-                    </Text>
-                  </TouchableOpacity>
 
-                  <DateTimePickerModal
-                    isVisible={isDatePickerVisible}
-                    mode="date"
-                    onConfirm={(date) => {
-                      setQueryDate(formatDate(date));
-                      setDatePickerVisible(false);
-                    }}
-                    onCancel={() => setDatePickerVisible(false)}
-                  />
-                  </>
-                )}
+                {/* Dia da semana */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Dia da Semana</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {WEEK_DAYS.map((weekDay) => {
+                        const active = queryWeekDay.includes(weekDay);
+                        return (
+                          <TouchableOpacity
+                            key={weekDay}
+                            onPress={() => 
+                              setQueryWeekDay(prev => prev.includes(weekDay) ? prev.filter(p => p !== weekDay) : [...prev, weekDay])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{WEEK_DAY_LABELS[weekDay]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
 
-                {Platform.OS === 'web' ? (
-                  <TextInput
-                    placeholder="Hora (HH:MM)"
-                    placeholderTextColor="rgba(204,204,204,0.5)"
-                    value={queryTime}
-                    onChangeText={(text) => setQueryTime(maskTimeInput(text))}
-                    keyboardType="number-pad"
-                    style={{ ...styles.input, marginBottom: 12 }}
-                  />
-                ) : (
-                  <>
-                  <TouchableOpacity
-                    onPress={() => setTimePickerVisible(true)}
-                    style={{ ...styles.input, justifyContent: 'center', height: 44, marginBottom: 12 }}
-                  >
-                    <Text style={{ color: queryTime ? 'white' : 'rgba(204,204,204,0.5)' }}>
-                      {queryTime || 'HH:MM'}
-                    </Text>
-                  </TouchableOpacity>
+                {/* Periodo do Dia */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Período do Dia</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {DAY_TIMES.map((dayTime) => {
+                        const active = queryDayTime.includes(dayTime);
+                        return (
+                          <TouchableOpacity
+                            key={dayTime}
+                            onPress={() => 
+                              setQueryDayTime(prev => prev.includes(dayTime) ? prev.filter(p => p !== dayTime) : [...prev, dayTime])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{DAY_TIME_LABELS[dayTime]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
 
-                  <DateTimePickerModal
-                    isVisible={isTimePickerVisible}
-                    mode="time"
-                    is24Hour={true}
-                    onConfirm={(date) => {
-                      setQueryTime(formatTime(date));
-                      setTimePickerVisible(false);
-                    }}
-                    onCancel={() => setTimePickerVisible(false)}
-                  />
-                  </>
-                )}
+                {/* Tipo do Campo */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Tipo do Campo</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {FIELD_TYPES.map((fieldType) => {
+                        const active = queryFieldType.includes(fieldType);
+                        return (
+                          <TouchableOpacity
+                            key={fieldType}
+                            onPress={() => 
+                              setQueryFieldType(prev => prev.includes(fieldType) ? prev.filter(p => p !== fieldType) : [...prev, fieldType])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{FIELD_TYPE_LABELS[fieldType]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Faixa de Preço */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Faixa de Preço</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {PRICE.map((price) => {
+                        const active = queryPrice.includes(price);
+                        return (
+                          <TouchableOpacity
+                            key={price}
+                            onPress={() => 
+                              setQueryPrice(prev => prev.includes(price) ? prev.filter(p => p !== price) : [...prev, price])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{PRICE_LABELS[price]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Intensidade */}
+                <View style={{ marginBottom: 8 }}>
+                  <View style={styles.filterCard}>
+                    <Text style={styles.filterLabel}>Intensidade</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {LEVELS.map((lvl) => {
+                        const active = queryLevel.includes(lvl);
+                        return (
+                          <TouchableOpacity
+                            key={lvl}
+                            onPress={() => 
+                              setQueryLevel(prev => prev.includes(lvl) ? prev.filter(p => p !== lvl) : [...prev, lvl])
+                            }
+                            style={[
+                              styles.levelChip,
+                              active && styles.levelChipActive,
+                            ]}
+                          >
+                            <Text style={active ? styles.levelChipTextActive : styles.levelChipText}>{LEVEL_LABELS[lvl]}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
 
                 <View style={styles.modalFooter}>
                   <TouchableOpacity
-                    onPress={() => { setQuerySport(''); setQueryLocation(''); setQueryDate(''); setQueryTime(''); setQueryLevel(''); setSearchName(''); setModalVisible(false); }}
+                    onPress={async () => {
+                      setQueryDayTime([]); setQueryFieldType([]); setQueryPrice([]); setQueryWeekDay([]); setQueryLevel([]); setSearchName('');
+                      await fetchSessions({
+                        queryDayTime: [],
+                        queryFieldType: [],
+                        queryPrice: [],
+                        queryWeekDay: [],
+                        queryLevel: [],
+                        searchName: '',
+                      });
+                      setModalVisible(false);
+                    }}
                     style={[styles.modalButton, { backgroundColor: '#2A2A2A' }]}
                   >
                     <Text style={{ color: 'white' }}>Limpar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setModalVisible(false)}
+                    onPress={async () => {
+                      await fetchSessions();
+                      setModalVisible(false);
+                    }}
                     style={[styles.modalButton, { backgroundColor: '#C7FF00' }]}
                   >
                     <Text style={{ color: '#121212', fontWeight: '700' }}>Aplicar</Text>
@@ -278,38 +521,24 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Native pickers for non-web */}
-      <DateTimePickerModal
-        isVisible={isDatePickerVisible}
-        mode="date"
-        onConfirm={(date) => {
-          setQueryDate(formatDate(date));
-          setDatePickerVisible(false);
-        }}
-        onCancel={() => setDatePickerVisible(false)}
-      />
-
-      <DateTimePickerModal
-        isVisible={isTimePickerVisible}
-        mode="time"
-        is24Hour={true}
-        onConfirm={(date) => {
-          setQueryTime(formatTime(date));
-          setTimePickerVisible(false);
-        }}
-        onCancel={() => setTimePickerVisible(false)}
-      />
-
       <FlatList
         contentContainerStyle={styles.container}
-        data={results}
+        data={filteredSessions}
         renderItem={({ item }) => renderCard(item)}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={() => (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyIcon}>🔎</Text>
-            <Text style={styles.emptyTitle}>Nenhuma partida encontrada</Text>
-            <Text style={styles.emptyText}>Ajuste os filtros para encontrar partidas próximas.</Text>
+            {loading ? (
+              <View style={styles.loadingOverlay} pointerEvents="box-none">
+                <ActivityIndicator size="large" color="#C7FF00" />
+              </View>
+            ) : (
+              <>
+                <Text style={styles.emptyIcon}>🔎</Text>
+                <Text style={styles.emptyTitle}>Nenhuma partida encontrada</Text>
+                <Text style={styles.emptyText}>Ajuste os filtros para encontrar partidas próximas.</Text>
+              </>
+            )}
           </View>
         )}
       />
@@ -347,5 +576,58 @@ const styles = StyleSheet.create({
   modalTitle: { color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 12 },
   modalFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginHorizontal: 4 },
+  levelChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: '#2A2A2A',
+    borderWidth: 1,
+    borderColor: 'rgba(204,204,204,0.08)'
+  },
+  levelChipActive: {
+    backgroundColor: '#C7FF00',
+    borderColor: '#C7FF00'
+  },
+  levelChipText: { color: 'white' },
+  levelChipTextActive: { color: '#121212', fontWeight: '700' },
+  filterCard: {
+    padding: 12,
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: 'rgba(204,204,204,0.2)',
+    borderRadius: 12,
+  },
+  filterLabel: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    zIndex: 10,
+  },
+  distButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(204,204,204,0.12)'
+  },
+  distButtonText: { color: 'white', fontSize: 18, fontWeight: '700' },
+  distTrackWrap: { flex: 1, alignItems: 'center' },
+  distTrack: { width: '100%', height: 8, backgroundColor: '#2A2A2A', borderRadius: 8, overflow: 'hidden' },
+  distFill: { height: '100%', backgroundColor: '#C7FF00' },
+  distValue: { color: 'white', marginTop: 6, fontSize: 12, textAlign: 'center' },
 });
 

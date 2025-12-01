@@ -1,9 +1,16 @@
 import * as SecureStore from 'expo-secure-store'; // Ou outra lib de criptografia
+import { Platform } from 'react-native';
 import api from '../services/api';
 
 // Função para salvar logo após o login
 export const saveAuthData = async (accessToken: string, refreshToken: string) => {
     try {
+        if(Platform.OS === 'web') {
+            localStorage.setItem('user_token', accessToken);
+            localStorage.setItem('user_refresh_token', refreshToken);
+            api.defaults.headers.Authorization = `Bearer ${accessToken}`;
+            return;
+        }
         await SecureStore.setItemAsync('user_token', accessToken);
         await SecureStore.setItemAsync('user_refresh_token', refreshToken);
         api.defaults.headers.Authorization = `Bearer ${accessToken}`;
