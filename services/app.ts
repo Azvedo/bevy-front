@@ -15,7 +15,6 @@ export interface CreateEventDTO {
 }
 
 export const createEvent = async (eventData: CreateEventDTO) => {
-  const response = await api.post("/eventos", eventData);
+  const response = await api.post("/user/created-events", eventData);
   return response.data;
 };
-
