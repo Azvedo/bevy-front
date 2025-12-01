@@ -46,6 +46,13 @@ export default function MainLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="session-details"
+        options={{
+          title: 'Detalhes da Pelada',
+          href: null, // esconde do menu inferior
+        }}
+      />
     </Tabs>
   );
 }

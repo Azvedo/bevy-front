@@ -238,21 +238,36 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
   }, []);
 
   const renderCard = (session: Session) => (
-    <View key={session.id} style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View>
-          <Text style={styles.sessionSport}>{session.nome}</Text>
-          <Text style={styles.sessionLevel}>{session.intensidade}</Text>
-        </View>
-      </View>
-
-      <View style={styles.cardBody}>
-        <Text style={styles.metaText}>{session.localizacao}</Text>
-        <Text style={styles.metaText}>{formatLocalDate(session.dataHora)} às {formatLocalTime(session.dataHora)}</Text>
-        <Text style={styles.metaText}>{session.peladeirosInscritos.length} confirmados • {session.vagas} vagas</Text>
+  <TouchableOpacity
+    key={session.id}
+    style={styles.card}
+    activeOpacity={0.9}
+    onPress={() =>
+      router.push({
+        pathname: '/session-details',  
+        params: { id: session.id, from: 'search' },
+      })
+    }
+  >
+    <View style={styles.cardHeader}>
+      <View>
+        <Text style={styles.sessionSport}>{session.nome}</Text>
+        <Text style={styles.sessionLevel}>{session.intensidade}</Text>
       </View>
     </View>
-  );
+
+    <View style={styles.cardBody}>
+      <Text style={styles.metaText}>{session.localizacao}</Text>
+      <Text style={styles.metaText}>
+        {formatLocalDate(session.dataHora)} às {formatLocalTime(session.dataHora)}
+      </Text>
+      <Text style={styles.metaText}>
+        {session.peladeirosInscritos.length} confirmados • {session.vagas} vagas
+      </Text>
+    </View>
+  </TouchableOpacity>
+);
+
 
 const formatLocalDate = (iso: string) => {
   if (!iso) return '';
