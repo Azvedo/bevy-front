@@ -98,10 +98,9 @@ export type Session = {
   intensidade: string;
 };
 
-// Mock API URL and params
-const DEFAULT_DISTANCE = 20; // default distance in meters (20 km)
-const MAX_DISTANCE = 50; // max slider distance in meters (50 km)
-const DISTANCE_STEP = 1; // 1 km steps
+const DEFAULT_DISTANCE = 20000; // default distance
+const MAX_DISTANCE = 50000; // max slider distance 
+const DISTANCE_STEP = 1000; // 1 step
 
 
 export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
@@ -311,7 +310,7 @@ const formatLocalTime = (iso: string) => {
                 <View style={{ marginBottom: 12 }}>
                   <View style={styles.filterCard}>
                     <Text style={styles.filterLabel}>Distância (km)</Text>
-                    <Text style={{ color: 'white', marginBottom: 8 }}>{(tempDist).toFixed(0)} km</Text>
+                    <Text style={{ color: 'white', marginBottom: 8 }}>{(tempDist/1000).toFixed(0)} km</Text>
                     <Slider
                       minimumValue={0}
                       maximumValue={MAX_DISTANCE}
