@@ -8,15 +8,4 @@ const api = axios.create({
     },
 });
 
-// Interceptor para printar o Authorization header
-api.interceptors.request.use(
-    (config) => {
-        console.log('Authorization:', config.headers.Authorization);
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
 export default api;

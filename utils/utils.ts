@@ -23,7 +23,7 @@ export const clearAuthData = async () => {
     try {
         await SecureStore.deleteItemAsync('user_token');
         await SecureStore.deleteItemAsync('user_refresh_token');
-        api.defaults.headers.Authorization = '';
+        api.defaults.headers.Authorization = null;
     } catch (error) {
         console.error("Erro ao limpar tokens", error);
     }
