@@ -1,5 +1,6 @@
 import { searchCreatedSessions, searchMySessions } from '@/services/search';
 import { useRouter } from 'expo-router';
+import { ArrowLeftIcon } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -94,52 +95,80 @@ export default function MySessionsScreen({
   //const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
 
   const renderSessionCard = (session: Session, isCreated = false) => {
-    return (
-      <View key={session.id} style={[styles.card, isCreated && styles.cardHighlight]}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.sessionSport}>{session.nome}</Text>
-            <Text style={styles.sessionLevel}>{session.intensidade}</Text>
-          </View>
-          <View style={styles.cardActions}>
-            {isCreated && onEditSession && (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.editButton]}
-                onPress={() => onEditSession(session)}
-              >
-                <Text style={styles.actionText}>Editar</Text>
-              </TouchableOpacity>
-            )}
-            {isCreated && onDeleteSession && (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.deleteButton]}
-                onPress={() => onDeleteSession(session.id)}
-              >
-                <Text style={styles.actionText}>Excluir</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+  return (
+    <TouchableOpacity
+      key={session.id}
+      style={[styles.card, isCreated && styles.cardHighlight]}
+      activeOpacity={0.9}
+      onPress={() =>
+        router.push({
+          pathname: '/session-details',
+          params: { d: session.id, from: 'my-sessions' },
+        })
+      }
+    >
+      <View style={styles.cardHeader}>
+        <View>
+          <Text style={styles.sessionSport}>{session.nome}</Text>
+          <Text style={styles.sessionLevel}>{session.intensidade}</Text>
         </View>
 
-        <View style={styles.cardBody}>
-          <Text style={styles.metaText}>{session.localizacao}</Text>
-          <Text style={styles.metaText}>
-            {new Date(session.dataHora).toLocaleDateString('pt-BR')} às {new Date(session.dataHora).toLocaleTimeString('pt-BR')}
-          </Text>
-          {!isCreated && (
-            <Text style={styles.metaText}>{session.peladeirosInscritos.length} confirmados</Text>
+        <View style={styles.cardActions}>
+          {isCreated && onEditSession && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => onEditSession(session)}
+            >
+              <Text style={styles.actionText}>Editar</Text>
+            </TouchableOpacity>
           )}
-          {isCreated && (
-            <Text style={styles.metaText}>
-              {session.vagas - session.peladeirosInscritos.length} vagas disponíveis (de {session.vagas})
-            </Text>
+
+          {isCreated && onDeleteSession && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={() => onDeleteSession(session.id)}
+            >
+              <Text style={styles.actionText}>Excluir</Text>
+            </TouchableOpacity>
           )}
-          {session.custoPeladeiro && <Text style={styles.metaText}>{session.custoPeladeiro} por pessoa</Text>}
-          {session.descricao && <Text style={styles.description}>{session.descricao}</Text>}
         </View>
       </View>
-    );
-  };
+
+      <View style={styles.cardBody}>
+        <Text style={styles.metaText}>{session.localizacao}</Text>
+        <Text style={styles.metaText}>
+          {new Date(session.dataHora).toLocaleDateString('pt-BR')} às{' '}
+          {new Date(session.dataHora).toLocaleTimeString('pt-BR')}
+        </Text>
+
+        {!isCreated && (
+          <Text style={styles.metaText}>
+            {session.peladeirosInscritos.length} confirmados
+          </Text>
+        )}
+
+        {isCreated && (
+          <Text style={styles.metaText}>
+            {session.vagas - session.peladeirosInscritos.length} vagas
+            disponíveis (de {session.vagas})
+          </Text>
+        )}
+
+        {session.custoPeladeiro && (
+          <Text style={styles.metaText}>
+            R$ {session.custoPeladeiro} por pessoa
+          </Text>
+        )}
+
+        {session.descricao && (
+          <Text style={styles.description}>{session.descricao}</Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
