@@ -1,6 +1,6 @@
 import { searchCreatedSessions, searchMySessions } from '@/services/search';
 import { useRouter } from 'expo-router';
-import { ArrowLeftIcon } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -57,7 +57,7 @@ export default function MySessionsScreen({
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  
+
 
   const fetchList = async (
     getter: () => Promise<any>,
@@ -86,87 +86,87 @@ export default function MySessionsScreen({
     await Promise.all([fetchCreatedSessions(), fetchJoinedSessions()]);
   }
 
-    useEffect(() => {
-      fetchAll();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   //const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
 
   const renderSessionCard = (session: Session, isCreated = false) => {
-  return (
-    <TouchableOpacity
-      key={session.id}
-      style={[styles.card, isCreated && styles.cardHighlight]}
-      activeOpacity={0.9}
-      onPress={() =>
-        router.push({
-          pathname: '/session-details',
-          params: { d: session.id, from: 'my-sessions' },
-        })
-      }
-    >
-      <View style={styles.cardHeader}>
-        <View>
-          <Text style={styles.sessionSport}>{session.nome}</Text>
-          <Text style={styles.sessionLevel}>{session.intensidade}</Text>
+    return (
+      <TouchableOpacity
+        key={session.id}
+        style={[styles.card, isCreated && styles.cardHighlight]}
+        activeOpacity={0.9}
+        onPress={() =>
+          router.push({
+            pathname: '/session-details',
+            params: { d: session.id, from: 'my-sessions' },
+          })
+        }
+      >
+        <View style={styles.cardHeader}>
+          <View>
+            <Text style={styles.sessionSport}>{session.nome}</Text>
+            <Text style={styles.sessionLevel}>{session.intensidade}</Text>
+          </View>
+
+          <View style={styles.cardActions}>
+            {isCreated && onEditSession && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.editButton]}
+                onPress={() => onEditSession(session)}
+              >
+                <Text style={styles.actionText}>Editar</Text>
+              </TouchableOpacity>
+            )}
+
+            {isCreated && onDeleteSession && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => onDeleteSession(session.id)}
+              >
+                <Text style={styles.actionText}>Excluir</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-        <View style={styles.cardActions}>
-          {isCreated && onEditSession && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.editButton]}
-              onPress={() => onEditSession(session)}
-            >
-              <Text style={styles.actionText}>Editar</Text>
-            </TouchableOpacity>
+        <View style={styles.cardBody}>
+          <Text style={styles.metaText}>{session.localizacao}</Text>
+          <Text style={styles.metaText}>
+            {new Date(session.dataHora).toLocaleDateString('pt-BR')} às{' '}
+            {new Date(session.dataHora).toLocaleTimeString('pt-BR')}
+          </Text>
+
+          {!isCreated && (
+            <Text style={styles.metaText}>
+              {session.peladeirosInscritos.length} confirmados
+            </Text>
           )}
 
-          {isCreated && onDeleteSession && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.deleteButton]}
-              onPress={() => onDeleteSession(session.id)}
-            >
-              <Text style={styles.actionText}>Excluir</Text>
-            </TouchableOpacity>
+          {isCreated && (
+            <Text style={styles.metaText}>
+              {session.vagas - session.peladeirosInscritos.length} vagas
+              disponíveis (de {session.vagas})
+            </Text>
+          )}
+
+          {session.custoPeladeiro && (
+            <Text style={styles.metaText}>
+              R$ {session.custoPeladeiro} por pessoa
+            </Text>
+          )}
+
+          {session.descricao && (
+            <Text style={styles.description}>{session.descricao}</Text>
           )}
         </View>
-      </View>
-
-      <View style={styles.cardBody}>
-        <Text style={styles.metaText}>{session.localizacao}</Text>
-        <Text style={styles.metaText}>
-          {new Date(session.dataHora).toLocaleDateString('pt-BR')} às{' '}
-          {new Date(session.dataHora).toLocaleTimeString('pt-BR')}
-        </Text>
-
-        {!isCreated && (
-          <Text style={styles.metaText}>
-            {session.peladeirosInscritos.length} confirmados
-          </Text>
-        )}
-
-        {isCreated && (
-          <Text style={styles.metaText}>
-            {session.vagas - session.peladeirosInscritos.length} vagas
-            disponíveis (de {session.vagas})
-          </Text>
-        )}
-
-        {session.custoPeladeiro && (
-          <Text style={styles.metaText}>
-            R$ {session.custoPeladeiro} por pessoa
-          </Text>
-        )}
-
-        {session.descricao && (
-          <Text style={styles.description}>{session.descricao}</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-};
+      </TouchableOpacity>
+    );
+  };
 
 
 
@@ -177,48 +177,59 @@ export default function MySessionsScreen({
           <ActivityIndicator size="large" color="#C7FF00" />
         </View>
       ) : (
-      <FlatList
-        contentContainerStyle={styles.container}
-        data={[]}
-        ListHeaderComponent={
-          <View>
-            {sessionsCreated.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Peladas Criadas</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Você criou {sessionsCreated.length} {sessionsCreated.length === 1 ? 'pelada' : 'peladas'}
-                </Text>
-                {sessionsCreated.map((s) => renderSessionCard(s, true))}
-              </View>
-            )}
+        <FlatList
+          contentContainerStyle={styles.container}
+          data={[]}
+          ListHeaderComponent={
+            <View>
+              {sessionsCreated.length > 0 && (
+                <View style={styles.section}>
+                  {/* 2. Envolva o título e o botão em uma View com row */}
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>Peladas Criadas</Text>
+                    <TouchableOpacity
+                      onPress={() => router.push('/screens/create-session')}
+                      style={styles.addButton}
+                    >
+                      <Plus size={20} color="#121212" />
+                      <Text style={styles.addButtonText}>Criar</Text>
+                    </TouchableOpacity>
+                  </View>
 
-            {sessionsJoined.length > 0 ? (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Sessões Confirmadas</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Você tem {sessionsJoined.length} {sessionsJoined.length === 1 ? 'sessão confirmada' : 'sessões confirmadas'}
-                </Text>
-                {sessionsJoined.map((s) => renderSessionCard(s, false))}
-              </View>
-            ) : sessionsCreated.length === 0 ? (
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyIcon}>📅</Text>
-                <Text style={styles.emptyTitle}>Nenhuma sessão ainda</Text>
-                <Text style={styles.emptyText}>Encontre sessões para participar ou crie a sua própria!</Text>
-              </View>
-            ) : null}
-          </View>
-        }
-        renderItem={null}
-        keyExtractor={() => Math.random().toString()}
-      />
+                  <Text style={styles.sectionSubtitle}>
+                    Você criou {sessionsCreated.length} {sessionsCreated.length === 1 ? 'pelada' : 'peladas'}
+                  </Text>
+                  {sessionsCreated.map((s) => renderSessionCard(s, true))}
+                </View>
+              )}
+
+              {sessionsJoined.length > 0 ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Sessões Confirmadas</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Você tem {sessionsJoined.length} {sessionsJoined.length === 1 ? 'sessão confirmada' : 'sessões confirmadas'}
+                  </Text>
+                  {sessionsJoined.map((s) => renderSessionCard(s, false))}
+                </View>
+              ) : sessionsCreated.length === 0 ? (
+                <View style={styles.emptyWrap}>
+                  <Text style={styles.emptyIcon}>📅</Text>
+                  <Text style={styles.emptyTitle}>Nenhuma sessão ainda</Text>
+                  <Text style={styles.emptyText}>Encontre sessões para participar ou crie a sua própria!</Text>
+                </View>
+              ) : null}
+            </View>
+          }
+          renderItem={null}
+          keyExtractor={() => Math.random().toString()}
+        />
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#121212'},
+  safe: { flex: 1, backgroundColor: '#121212' },
   header: { backgroundColor: '#1E1E1E', padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(204,204,204,0.2)' },
   backButton: { paddingVertical: 6 },
   backText: { color: '#CCCCCC' },
@@ -254,5 +265,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.35)',
     zIndex: 10,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#C7FF00',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    gap: 4
+  },
+  addButtonText: {
+    color: '#121212',
+    fontWeight: '700',
+    fontSize: 12
   },
 });
