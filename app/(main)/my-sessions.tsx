@@ -1,7 +1,7 @@
 import { searchCreatedSessions, searchMySessions } from '@/services/search';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -86,10 +86,11 @@ export default function MySessionsScreen({
     await Promise.all([fetchCreatedSessions(), fetchJoinedSessions()]);
   }
 
-  useEffect(() => {
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 3. Substitua o useEffect antigo por isso:
+  useFocusEffect(
+    useCallback(() => {
+      fetchAll();
+    }, []));
 
 
   //const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
