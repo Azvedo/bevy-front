@@ -22,7 +22,7 @@ type UserData = {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [userData, setUserData] = useState<UserData>({ name: '', email: '' }); // Simulação de dados do usuário
+  const [userData, setUserData] = useState<UserData>({ nome: '', email: '', id: '' }); // Simulação de dados do usuário
 
   const fetchUserData = async () => {
     try {

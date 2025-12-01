@@ -20,6 +20,7 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen name="screens/create-session" options={{ headerShown: false }} />
+        <Stack.Screen name="screens/payment" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
