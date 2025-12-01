@@ -182,27 +182,36 @@ export default function MySessionsScreen({
           data={[]}
           ListHeaderComponent={
             <View>
-              {sessionsCreated.length > 0 && (
-                <View style={styles.section}>
-                  {/* 2. Envolva o título e o botão em uma View com row */}
-                  <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionTitle}>Peladas Criadas</Text>
-                    <TouchableOpacity
-                      onPress={() => router.push('/screens/create-session')}
-                      style={styles.addButton}
-                    >
-                      <Plus size={20} color="#121212" />
-                      <Text style={styles.addButtonText}>Criar</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={styles.sectionSubtitle}>
-                    Você criou {sessionsCreated.length} {sessionsCreated.length === 1 ? 'pelada' : 'peladas'}
-                  </Text>
-                  {sessionsCreated.map((s) => renderSessionCard(s, true))}
+              {/* SEÇÃO PELADAS CRIADAS (Agora sempre visível) */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionTitle}>Peladas Criadas</Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/screens/create-session')}
+                    style={styles.addButton}
+                  >
+                    <Plus size={20} color="#121212" />
+                    <Text style={styles.addButtonText}>Criar</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
 
+                {/* Renderiza a lista apenas se houver itens */}
+                {sessionsCreated.length > 0 ? (
+                  <>
+                    <Text style={styles.sectionSubtitle}>
+                      Você criou {sessionsCreated.length} {sessionsCreated.length === 1 ? 'pelada' : 'peladas'}
+                    </Text>
+                    {sessionsCreated.map((s) => renderSessionCard(s, true))}
+                  </>
+                ) : (
+                  // Opcional: Mensagem discreta quando não há criadas, mas o botão já está lá
+                  <Text style={{ color: '#666', fontSize: 14, fontStyle: 'italic', marginBottom: 8 }}>
+                    Você ainda não criou nenhuma pelada.
+                  </Text>
+                )}
+              </View>
+
+              {/* SEÇÃO SESSÕES CONFIRMADAS */}
               {sessionsJoined.length > 0 ? (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Sessões Confirmadas</Text>
@@ -212,6 +221,7 @@ export default function MySessionsScreen({
                   {sessionsJoined.map((s) => renderSessionCard(s, false))}
                 </View>
               ) : sessionsCreated.length === 0 ? (
+                // Estado vazio geral (aparece abaixo do header se ambas as listas estiverem vazias)
                 <View style={styles.emptyWrap}>
                   <Text style={styles.emptyIcon}>📅</Text>
                   <Text style={styles.emptyTitle}>Nenhuma sessão ainda</Text>
