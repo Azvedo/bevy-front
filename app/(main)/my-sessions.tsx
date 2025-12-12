@@ -85,17 +85,16 @@ export default function MySessionsScreen({
   const fetchAll = async () => {
     await Promise.all([fetchCreatedSessions(), fetchJoinedSessions()]);
   }
-
   // 3. Substitua o useEffect antigo por isso:
   useFocusEffect(
     useCallback(() => {
       fetchAll();
     }, []));
 
-
   //const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
 
   const renderSessionCard = (session: Session, isCreated = false) => {
+    console.log('Rendering session card for:', session.id, 'isCreated:', isCreated);
     return (
       <TouchableOpacity
         key={session.id}
@@ -103,8 +102,8 @@ export default function MySessionsScreen({
         activeOpacity={0.9}
         onPress={() =>
           router.push({
-            pathname: '/session-details',
-            params: { d: session.id, from: 'my-sessions' },
+            pathname: '/session-details-owner',
+            params: { id: session.id, from: 'my-sessions' },
           })
         }
       >
