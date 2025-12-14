@@ -19,7 +19,7 @@ export default function RootLayout() {
             gestureEnabled: false // Impede voltar para auth após login
           }} 
         />
-        <Stack.Screen name="screens/create-session" options={{ headerShown: false }} />
+        <Stack.Screen name="screens/create-session" options={{ title: 'Criar Pelada', headerShown: true, headerStyle: { backgroundColor: '#1E1E1E',}, headerTintColor: '#ffffffff' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

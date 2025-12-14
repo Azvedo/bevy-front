@@ -53,6 +53,13 @@ export default function MainLayout() {
           href: null, // esconde do menu inferior
         }}
       />
+      <Tabs.Screen
+        name="session-details-owner"
+        options={{
+          title: 'Detalhes da Pelada',
+          href: null, // esconde do menu inferior
+        }}
+      />
     </Tabs>
   );
 }

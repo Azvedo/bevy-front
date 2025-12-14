@@ -104,16 +104,8 @@ export default function SessionDetailsScreen() {
   setShowPayment(true);
 };
 const handleBack = () => {
-  if (from === 'search') {
     router.push('/search-match');
     return;
-  }
-  if (from === 'my-sessions') {
-    router.push('/my-sessions');
-    return;
-  }
-  // fallback: histórico normal
-  router.back();
 };
 
 const handlePaymentSuccess = async () => {
