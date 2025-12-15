@@ -1,5 +1,6 @@
 import {
     EventoDTO,
+    getEventById
 } from '@/services/events';
 import { Entypo } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -46,9 +47,11 @@ const MOCK_EVENT: EventoDTO = {
         { id: '5', nome: 'Felipe Costa', avaliacao: 4.3 },
         { id: '6', nome: 'Diego Ferreira', avaliacao: 4.7 },
     ] as any[],
+    prestadorsInscritos: []
 };
 
 export default function SessionDetailsScreen() {
+    console.log('Rendering SessionDetailsOwnerScreen');
     const router = useRouter();
     const { id, from } = useLocalSearchParams<{ id?: string; from?: string }>();
     console.log('Session ID:', id);
@@ -62,14 +65,14 @@ export default function SessionDetailsScreen() {
 
     useEffect(() => {
         const load = async () => {
-            // if (!id) return;
+            if (!id) return;
             try {
                 setIsLoading(true);
                 // Código comentado para usar API real:
-                // const evt = await getEventById(String(id));
+                const evt = await getEventById(String(id));
 
                 // Dados mockados para teste:
-                const evt = MOCK_EVENT;
+                // const evt = MOCK_EVENT;
 
                 setEvent(evt);
                 setEditData(evt);
@@ -283,7 +286,7 @@ export default function SessionDetailsScreen() {
 
                     {(event.peladeirosInscritos ?? []).map((p: any) => {
                         const nome = p?.nome ?? 'Participante';
-                        const avaliacao = p?.avaliacao ?? 4.5;
+                        const avaliacao = p?.nota ?? 4.5;
                         const initial = String(nome).trim().charAt(0).toUpperCase();
                         return (
                             <View key={String(p?.id ?? nome)} style={styles.participantRow}>
@@ -293,7 +296,7 @@ export default function SessionDetailsScreen() {
                                 <View style={styles.participantInfo}>
                                     <Text style={styles.participantName}>{nome}</Text>
                                     <View style={styles.ratingContainer}>
-                                        
+
                                         <Text style={styles.ratingStars}><Entypo name="star" size={13} color="#C7FF00" /> {avaliacao}</Text>
                                     </View>
                                 </View>
@@ -303,6 +306,39 @@ export default function SessionDetailsScreen() {
                                 >
                                     <Text style={styles.deleteIcon}><Entypo name="remove-user" size={22} color="red" /></Text>
                                 </TouchableOpacity>
+                            </View>
+                        );
+                    })}
+                </View>
+
+                <View style={styles.card}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <Text style={styles.cardTitle}>Prestadores de Serviço ({event.prestadorsInscritos?.length ?? 0})</Text>
+                        <TouchableOpacity
+                            style={[styles.primaryButton, { paddingVertical: 8, paddingHorizontal: 16 }]}
+                            onPress={() => router.push('/screens/search-service')}
+                        >
+                            <Text style={styles.primaryButtonText}>+</Text>
+                        </TouchableOpacity>
+                    </View>
+
+
+                    {(event.prestadorsInscritos ?? []).map((p: any) => {
+                        const nome = p?.tipoPrestadorServico ? (p?.tipoPrestadorServico === "GOLEIRO" ? 'Goleiro' : 'Árbitro') : "Prestador de Serviço";
+                        const avaliacao = p?.nota ?? 4.5;
+                        const initial = String(nome).trim().charAt(0).toUpperCase();
+                        return (
+                            <View key={String(p?.id ?? nome)} style={styles.participantRow}>
+                                <View style={styles.avatarCircle}>
+                                    <Text style={styles.avatarInitial}>{initial}</Text>
+                                </View>
+                                <View style={styles.participantInfo}>
+                                    <Text style={styles.participantName}>{nome}</Text>
+                                    <View style={styles.ratingContainer}>
+
+                                        <Text style={styles.ratingStars}><Entypo name="star" size={13} color="#C7FF00" /> {avaliacao}</Text>
+                                    </View>
+                                </View>
                             </View>
                         );
                     })}

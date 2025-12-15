@@ -10,7 +10,8 @@ export type EventoDTO = {
   vagas: number;
   tipoCampo: string;
   intensidade: string;
-  peladeirosInscritos: { id: string; nome: string }[];
+  peladeirosInscritos: { id: string; nome: string; nota: string }[];
+  prestadorsInscritos: { id: string; nome: string; tipoPrestadorServico: string; nota: string }[];
 };
 
 export const getSubscribedEvents = async (): Promise<EventoDTO[]> => {

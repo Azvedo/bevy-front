@@ -21,6 +21,7 @@ export default function RootLayout() {
         />
         <Stack.Screen name="screens/create-session" options={{ title: 'Criar Pelada', headerShown: true, headerStyle: { backgroundColor: '#1E1E1E', }, headerTintColor: '#ffffffff' }} />
         <Stack.Screen name="screens/create-service" options={{ title: 'Criar Serviço', headerShown: true, headerStyle: { backgroundColor: '#1E1E1E', }, headerTintColor: '#ffffffff' }} />
+        <Stack.Screen name="screens/search-service" options={{ title: 'Prestador de Serviço', headerShown: true, headerStyle: { backgroundColor: '#1E1E1E', }, headerTintColor: '#ffffffff' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
