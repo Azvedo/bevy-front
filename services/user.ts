@@ -9,3 +9,8 @@ export const eventHistory = async () => {
   const response = await api.get(`/user/event-history`);
   return response.data;
 }
+
+export const createProvider = async (payload: any) => {
+  const response = await api.post(`/user/provider`, payload);
+  return response.data;
+}
