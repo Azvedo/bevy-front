@@ -22,15 +22,17 @@ api.interceptors.response.use(
                 // Faz refresh do token
                 const refreshToken = await SecureStore.getItemAsync('user_refresh_token');
                 console.log('Refresh token obtido:', refreshToken);
-                const { data } = await axios.post('https://bevy-api.onrender.com/auth/refresh-token', {
-                    refreshToken
+                const { data } = await axios.get('https://bevy-api.onrender.com/auth/refresh-token', {
+                    headers: {
+                        Authorization: `Bearer ${refreshToken}`,
+                    },
                 });
-
+                console.log('Novo token obtido via refresh:', data);
                 // Salva o novo token
-                await SecureStore.setItemAsync('user_token', data.token);            
+                await SecureStore.setItemAsync('user_token', data);            
                 // Atualiza o header da requisição original
-                api.defaults.headers.Authorization = `Bearer ${data.token}`;
-                originalRequest.headers['Authorization'] = `Bearer ${data.token}`;
+                api.defaults.headers.Authorization = `Bearer ${data}`;
+                originalRequest.headers['Authorization'] = `Bearer ${data}`;
                 
                 // Retenta a requisição original
                 return api(originalRequest);

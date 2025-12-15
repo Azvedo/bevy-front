@@ -17,6 +17,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
 
 
 // type and labels
@@ -132,7 +133,7 @@ export default function SearchMatchScreen({ onBack }: { onBack?: () => void }) {
       clearTimeout(handler);
     };
   }, [searchName]);
-
+  
   const filteredSessions = useMemo(() => {
     const nameLower = (debouncedSearch || '').trim().toLowerCase();
     if(!nameLower) return sessions;

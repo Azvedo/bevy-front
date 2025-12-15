@@ -122,7 +122,6 @@ export default function ProfilePage() {
     try {
       const games = await getMyGames();
       setGames(games);
-      console.log("Meus jogos carregados:", games);
       return games;
     } catch (error) {
       console.error("Erro ao buscar meus jogos:", error);
@@ -180,7 +179,6 @@ export default function ProfilePage() {
     try {
       const convocationsData = await getConvocations();
       setConvocations(convocationsData);
-      console.log('Convocações carregadas:', convocationsData);
     } catch (error) {
       console.error('Erro ao buscar convocações:', error);
     }

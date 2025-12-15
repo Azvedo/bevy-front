@@ -94,7 +94,6 @@ export default function MySessionsScreen({
   //const confirmed = mockSessions.filter((s) => joinedSessions.includes(s.id));
 
   const renderSessionCard = (session: Session, isCreated = false) => {
-    console.log('Rendering session card for:', session.id, 'isCreated:', isCreated);
     return (
       <TouchableOpacity
         key={session.id}

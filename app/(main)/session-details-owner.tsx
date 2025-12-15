@@ -49,7 +49,6 @@ const MOCK_EVENT: EventoDTO = {
 };
 
 export default function SessionDetailsScreen() {
-    console.log('Rendering SessionDetailsOwnerScreen');
     const router = useRouter();
     const { id, from } = useLocalSearchParams<{ id?: string; from?: string }>();
     console.log('Session ID:', id);
