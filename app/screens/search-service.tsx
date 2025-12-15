@@ -62,21 +62,19 @@ export type Service = {
   prestador?: { id: string; nome: string; nota?: number };
 };
 
-type PrestadorServico = [
-  {
-    prestadorId: string;
-    peladeiroId: string;
-    nome: string;
-    nota: number;
-    valor: number;
-    tipoPrestadorServico: 'GOLEIRO' | 'ARBITRO';
-    statusPrestador: 'A_CONFIRMAR' | 'CONFIRMADO' | 'CANCELADO';
-    disponibilidade: {
-      diaDaSemana: string;
-      horarios: string[];
-    }[];
-  }
-];
+type PrestadorServico = {
+  prestadorId: string;
+  peladeiroId: string;
+  nome: string;
+  nota: number;
+  valor: number;
+  tipoPrestadorServico: 'GOLEIRO' | 'ARBITRO';
+  statusPrestador: 'A_CONFIRMAR' | 'CONFIRMADO' | 'CANCELADO';
+  disponibilidade: {
+    diaDaSemana: string;
+    horarios: string[];
+  }[];
+};
 
 const DEFAULT_DISTANCE = 20000; // default distance
 const MAX_DISTANCE = 50000; // max slider distance 
@@ -91,7 +89,7 @@ interface SearchServiceScreenProps {
 }
 
 
-export default function SearchServiceScreen({ onBack, latitude, longitude, day, period }: SearchServiceScreenProps) {
+export default function SearchServiceScreen({ latitude, longitude }: SearchServiceScreenProps) {
   const router = useRouter();
 
   const [queryDayTime, setQueryDayTime] = useState<DayTime[]>([]);
@@ -101,7 +99,6 @@ export default function SearchServiceScreen({ onBack, latitude, longitude, day, 
   const [modalVisible, setModalVisible] = useState(false);
   const [services, setServices] = useState<PrestadorServico[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState(searchName);
   const [distancia, setDistancia] = useState<number>(DEFAULT_DISTANCE);
   const [distanceModalVisible, setDistanceModalVisible] = useState(false);
@@ -126,7 +123,6 @@ export default function SearchServiceScreen({ onBack, latitude, longitude, day, 
   // Fetch services/providers from backend using available filters
   const fetchServices = async (overrides?: FetchOverrides & { lat?: number | null; lon?: number | null }) => {
     setLoading(true);
-    setFetchError(null);
     try {
       const name = overrides?.searchName !== undefined ? overrides.searchName : searchName;
       const tiposPrestador = overrides?.queryTipoPrestador ?? queryTipoPrestador;
@@ -153,7 +149,6 @@ export default function SearchServiceScreen({ onBack, latitude, longitude, day, 
       else setServices([]);
     } catch (err: any) {
       console.error('fetchServices error', err);
-      setFetchError(err?.message || 'Erro ao buscar serviços');
       setServices([]);
     } finally {
       setLoading(false);
@@ -166,7 +161,7 @@ export default function SearchServiceScreen({ onBack, latitude, longitude, day, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const renderCard = (service: PrestadorServico[0]) => (
+  const renderCard = (service: PrestadorServico) => (
     <TouchableOpacity
       key={service.prestadorId}
       style={styles.card}
@@ -209,24 +204,6 @@ export default function SearchServiceScreen({ onBack, latitude, longitude, day, 
       </View>
     </TouchableOpacity>
   );
-
-
-  const formatLocalDate = (iso: string) => {
-    if (!iso) return '';
-    // se vier com time (ISO) pega só a parte da data
-    const datePart = iso.split('T')[0];
-    const parts = datePart.split('-');
-    if (parts.length !== 3) return iso;
-    const [y, m, d] = parts;
-    const dt = new Date(Number(y), Number(m) - 1, Number(d));
-    return dt.toLocaleDateString('pt-BR');
-  };
-
-  const formatLocalTime = (iso: string) => {
-    if (!iso) return '';
-    const d = new Date(iso); // interpreta o ISO e converte para o horário local
-    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
