@@ -19,6 +19,8 @@ import {
   participateInEvent,
 } from '@/services/events';
 
+import { confirmConvocation } from '@/services/user';
+
 const COLORS = {
   background: '#121212',
   card: '#1E1E1E',
@@ -30,14 +32,15 @@ const COLORS = {
 
 export default function SessionDetailsScreen() {
   const router = useRouter();
-  const { id, from } = useLocalSearchParams<{ id?: string; from?: string }>();
-
+  const { id, from, providerId, areadyAccepted } = useLocalSearchParams<{ id?: string; from?: string; providerId?: string, areadyAccepted?: string }>();
   const [event, setEvent] = useState<EventoDTO | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
 
+
+  console.log("Provider ID na sessão de detalhes:", providerId);
 
   useEffect(() => {
     const load = async () => {
@@ -75,54 +78,74 @@ export default function SessionDetailsScreen() {
     };
   }, [event]);
   const paymentSession = useMemo(() => {
-  if (!event) return null;
+    if (!event) return null;
 
-  const d = new Date(event.dataHora);
-  const date = d.toISOString().slice(0, 10); // '2025-12-01'
-  const time = d.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+    const d = new Date(event.dataHora);
+    const date = d.toISOString().slice(0, 10); // '2025-12-01'
+    const time = d.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
-  const price = `R$ ${Number(event.custoPeladeiro)
-    .toFixed(2)
-    .replace('.', ',')}`;
+    const price = `R$ ${Number(event.custoPeladeiro)
+      .toFixed(2)
+      .replace('.', ',')}`;
 
-  return {
-    id: event.id,
-    sport: event.nome,
-    location: event.localizacao,
-    date,
-    time,
-    price,
-  };
-}, [event]);
+    return {
+      id: event.id,
+      sport: event.nome,
+      location: event.localizacao,
+      date,
+      time,
+      price,
+    };
+  }, [event]);
 
 
   const handleParticipate = () => {
-  if (!event) return;
-  setShowPayment(true);
-};
-const handleBack = () => {
-    router.push('/search-match');
-    return;
-};
+    if (!event) return;
+    setShowPayment(true);
+  };
 
-const handlePaymentSuccess = async () => {
-  if (!id) return;
-  try {
-    setIsJoining(true);
-    await participateInEvent(String(id)); // chama o endpoint real
-    setIsJoined(true);
-    const refreshed = await getEventById(String(id));
-    setEvent(refreshed);
-  } catch (err) {
-    console.error('Erro ao confirmar participação após pagamento', err);
-  } finally {
-    setIsJoining(false);
-    setShowPayment(false);
-  }
-};
+  const handleAcceptConvocation = async () => {
+    if (!event) return;
+    try {
+      setIsJoining(true);
+      await confirmConvocation(String(event.id), String(providerId)); // chama o endpoint real
+      setIsJoined(true);
+      const refreshed = await getEventById(String(event.id));
+      setEvent(refreshed);
+    } catch (err) {
+      console.error('Erro ao aceitar convocação', err);
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleBack = () => {
+    if (from === 'search') {
+      router.push('/search-match');
+    } else if (from === 'profile') {
+      router.push('/profile');
+    }
+    return;
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!id) return;
+    try {
+      setIsJoining(true);
+      await participateInEvent(String(id)); // chama o endpoint real
+      setIsJoined(true);
+      const refreshed = await getEventById(String(id));
+      setEvent(refreshed);
+    } catch (err) {
+      console.error('Erro ao confirmar participação após pagamento', err);
+    } finally {
+      setIsJoining(false);
+      setShowPayment(false);
+    }
+  };
 
 
   if (isLoading || !event) {
@@ -269,7 +292,7 @@ const handlePaymentSuccess = async () => {
       </ScrollView>
 
       {/* Botão Participar (só mostra se ainda não estiver inscrito) */}
-      {!isJoined && (
+      {!isJoined && from === 'search' && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={styles.primaryButton}
@@ -283,6 +306,23 @@ const handlePaymentSuccess = async () => {
           </TouchableOpacity>
         </View>
       )}
+
+      {/*Botão para aceitar convocação de prestação de serviço*/}
+      {from === 'profile' && areadyAccepted !== 'true' && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            activeOpacity={0.9}
+            disabled={isJoining}
+            onPress={handleAcceptConvocation}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isJoining ? 'Aceitando...' : 'Aceitar Convocação'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {paymentSession && (
         <PaymentScreen
           visible={showPayment}
@@ -293,7 +333,7 @@ const handlePaymentSuccess = async () => {
       )}
 
     </SafeAreaView>
-    
+
   );
 }
 

@@ -136,13 +136,6 @@ export default function CreateServiceScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#CCCCCC" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Cadastrar Serviço</Text>
-      </View>
-
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.label}>Tipo de Serviço *</Text>

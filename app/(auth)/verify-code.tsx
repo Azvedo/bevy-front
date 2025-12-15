@@ -11,12 +11,24 @@ import {
     View,
 } from "react-native";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-
+import { verifyResetCode } from "../../services/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function VerifyCodePage() {
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const inputRefs = useRef<(TextInput | null)[]>([]);
     const router = useRouter();
+    const [email, setEmail] = useState('');
+
+    React.useEffect(() => {
+        const fetchEmail = async () => {
+            const storedEmail = await AsyncStorage.getItem('resetEmail');
+            if (storedEmail) {
+                setEmail(storedEmail);
+            }
+        };
+        fetchEmail();
+    }, []);
 
     const handleCodeChange = (value: string, index: number) => {
         // Remove non-numeric characters
@@ -40,11 +52,15 @@ export default function VerifyCodePage() {
         }
     };
 
-    const handleVerifyCode = () => {
+    const handleVerifyCode = async () => {
         const fullCode = code.join('');
         if (fullCode.length === 6) {
-            // aqui você adicionaria validação / chamada de API para verificar o código
-            router.replace("/(auth)/new-password");
+            try {
+                await verifyResetCode(email, fullCode);
+                router.replace("/(auth)/new-password");
+            }catch (error) {
+                console.error("Erro ao verificar o código:", error);
+            }
         }
     };
 

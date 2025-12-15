@@ -210,24 +210,6 @@ export default function MySessionsScreen({
                   </Text>
                 )}
               </View>
-
-              {/* SEÇÃO SESSÕES CONFIRMADAS */}
-              {sessionsJoined.length > 0 ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Sessões Confirmadas</Text>
-                  <Text style={styles.sectionSubtitle}>
-                    Você tem {sessionsJoined.length} {sessionsJoined.length === 1 ? 'sessão confirmada' : 'sessões confirmadas'}
-                  </Text>
-                  {sessionsJoined.map((s) => renderSessionCard(s, false))}
-                </View>
-              ) : sessionsCreated.length === 0 ? (
-                // Estado vazio geral (aparece abaixo do header se ambas as listas estiverem vazias)
-                <View style={styles.emptyWrap}>
-                  <Text style={styles.emptyIcon}>📅</Text>
-                  <Text style={styles.emptyTitle}>Nenhuma sessão ainda</Text>
-                  <Text style={styles.emptyText}>Encontre sessões para participar ou crie a sua própria!</Text>
-                </View>
-              ) : null}
             </View>
           }
           renderItem={null}

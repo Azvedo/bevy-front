@@ -7,20 +7,33 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    ActivityIndicator
 } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState } from "react";
-
+import { sendEmailForPasswordReset } from "../../services/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ForgotPasswordPage() {
 
     const [email, setEmail] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
-    const handleSendCode = () => {
-        // aqui você adicionaria validação / chamada de API para enviar o código de recuperação
-        router.replace("/(auth)/verify-code");
+    const handleSendCode = async () => {
+        try {
+            setIsLoading(true);
+            console.log("Enviando código para o email:", email);
+            await sendEmailForPasswordReset(email);
+            await AsyncStorage.setItem('resetEmail', email);
+            router.replace("/(auth)/verify-code");
+        } catch (error) {
+            console.error("Erro ao enviar código de recuperação:", error);
+            setIsLoading(false);
+        }finally {
+            setIsLoading(false);
+        }
     }
 
 
@@ -46,8 +59,8 @@ export default function ForgotPasswordPage() {
                         />
                     </View>
 
-                    <TouchableOpacity onPress={handleSendCode} style={styles.primaryButton} accessibilityRole="button">
-                        <Text style={styles.primaryButtonText}>{"Enviar código de recuperação"}</Text>
+                    <TouchableOpacity onPress={handleSendCode} style={styles.primaryButton} accessibilityRole="button" disabled={isLoading}>
+                        {isLoading ? <ActivityIndicator color="#121212" /> : <Text style={styles.primaryButtonText}>{"Enviar código de recuperação"}</Text>}
                     </TouchableOpacity>
                 </View>
             </ScrollView>

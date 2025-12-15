@@ -209,6 +209,7 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                 intensidade: mapLevelToIntensity(formData.level),
                 tipoCampo: "SOCIETY",
                 vagas: parseInt(formData.spots) || 0, // Adicionado mapeamento de vagas
+                minutos: 90,
                 custoPeladeiro: parsePrice(formData.price),
                 custoPrestadorServico: 0
             };
@@ -270,34 +271,7 @@ export default function CreateSessionScreen({ onBack, onCreateSession, editingSe
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={{ flex: 1 }}
             >
-                {/* Header */}
-                <View style={{
-                    backgroundColor: '#1E1E1E',
-                    borderBottomWidth: 1,
-                    borderBottomColor: 'rgba(204, 204, 204, 0.2)',
-                    paddingHorizontal: 16,
-                    paddingVertical: 16,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 16
-                }}>
-                    <TouchableOpacity
-                        onPress={handleBack}
-                        style={{
-                            padding: 8,
-                            marginLeft: -8,
-                            borderRadius: 9999,
-                        }}
-                    >
-                        <Feather name="arrow-left" size={24} color="#CCCCCC" />
-                    </TouchableOpacity>
-                    <View>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'white' }}>
-                            {editingSession ? 'Editar Pelada' : 'Criar Pelada'}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: '#CCCCCC' }}>Preencha as informações</Text>
-                    </View>
-                </View>
+                
 
                 <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 100 }}>
                     {/* Esporte */}

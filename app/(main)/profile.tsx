@@ -1,4 +1,4 @@
-import { getUserProfile } from '@/services/user';
+import { getConvocations, getUserProfile, getMyGames} from '@/services/user';
 import { clearAuthData } from '@/utils/utils';
 import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -8,42 +8,150 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+
 type UserData = {
+  id: string;
   nome: string;
   email: string;
-  id: string;
-  nota?: number;
-  telefone?: string;
-  dadosPrestadorServico?: {
-    descricao: string;
-    categoria: string;
-    precoHora: number;
-  };
-  // Adicione outros campos conforme necessário
+  telefone: string;
+  nota: number;
+  dadosPrestacaoServicos: [
+    {
+      idPrestador: string;
+      valor: number;
+      tipoPrestadorServico: 'GOLEIRO' | 'ARBITRO';
+      ativo: boolean;
+      disponibilidade: {
+        diaDaSemana: string;
+        horarios: string[];
+      };
+    }
+  ];
 };
+
+type Event = {
+  id: string;
+  nome: string;
+  descricao: string;
+  localizacao: string;
+  dataHora: string;
+  minutos: number;
+  vagas: number;
+  custoPeladeiro: number;
+  intensidade: 'leve' | 'moderada' | 'intensa';
+  tipoCampo: 'society' | 'campo' | 'quadra';
+  donoEvento: {
+    id: string;
+    nome: string;
+    nota: number;
+    status: string | null;
+  };
+  peladeirosInscritos: any[];
+  prestadorsInscritos: any[];
+};
+
+type Convocation = {
+  evento: Event;
+  tipoPrestador: string;
+};
+
+export type Session = {
+  id: string;
+  nome: string;
+  descricao: string;
+  localizacao: string;
+  dataHora: string; // ISO datetime: 2025-11-30T14:56:40.766Z
+  custoPeladeiro: number;
+  custoPrestadorServico: number;
+  vagas: number;
+  donoEvento: {
+    id: string;
+    nome: string;
+    nota: number;
+  };
+  peladeirosInscritos: {
+    id: string;
+    nome: string;
+    nota: number;
+  }[];
+  tipoCampo: string;
+  intensidade: string;
+};
+
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [userData, setUserData] = useState<UserData>({ nome: '', email: '', id: '' }); // Simulação de dados do usuário
+  const [userData, setUserData] = useState<UserData>({ nome: '', email: '', id: '', telefone: '', nota: 0, dadosPrestacaoServicos: [{ idPrestador: '', valor: 0, tipoPrestadorServico: 'GOLEIRO', ativo: false, disponibilidade: { diaDaSemana: '', horarios: [] } }] }); // Simulação de dados do usuário
   const [viewMode, setViewMode] = useState<'peladeiro' | 'prestador'>('peladeiro');
+  const [convocations, setConvocations] = useState<Convocation[]>([]);
+  const [games, setGames] = useState<Event[]>([]);
+
+
+  const renderCard = (session: Session, providerType: string) => (
+    <TouchableOpacity
+      key={session.id}
+      style={styles.card}
+      activeOpacity={0.9}
+      onPress={() =>
+        router.push({
+          pathname: '/session-details',
+          params: { id: session.id, from: 'profile', providerId: userData.dadosPrestacaoServicos.find(ds => ds.tipoPrestadorServico === providerType)?.idPrestador, areadyAccepted: 'true' },
+        })
+      }
+    >
+      <View style={styles.cardHeader}>
+        <View>
+          <Text style={styles.sessionSport}>{session.nome}</Text>
+          <Text style={styles.sessionLevel}>{session.intensidade}</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardBody}>
+        <Text style={styles.metaText}>{session.localizacao}</Text>
+        <Text style={styles.metaText}>
+          {formatLocalDate(session.dataHora)} às {formatLocalTime(session.dataHora)}
+        </Text>
+        <Text style={styles.metaText}>
+          {session.peladeirosInscritos.length} confirmados • {session.vagas} vagas
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const fetchMyGames = async () => {
+    try {
+      const games = await getMyGames();
+      setGames(games);
+      console.log("Meus jogos carregados:", games);
+      return games;
+    } catch (error) {
+      console.error("Erro ao buscar meus jogos:", error);
+      return [];
+    } 
+  };
+
+  const formatLocalDate = (iso: string) => {
+    if (!iso) return '';
+    // se vier com time (ISO) pega só a parte da data
+    const datePart = iso.split('T')[0];
+    const parts = datePart.split('-');
+    if (parts.length !== 3) return iso;
+    const [y, m, d] = parts;
+    const dt = new Date(Number(y), Number(m) - 1, Number(d));
+    return dt.toLocaleDateString('pt-BR');
+  };
+
+  const formatLocalTime = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso); // interpreta o ISO e converte para o horário local
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
   const fetchUserData = async () => {
     try {
       const data = await getUserProfile();
       // Mock data for testing
-      const data2 = {
-        nome: 'João Silva',
-        email: 'joao.silva@example.com',
-        id: '123456',
-        nota: 4.5,
-        telefone: '(11) 98765-4321',
-        dadosPrestadorServico: {
-          descricao: 'Árbitro profissional com 5 anos de experiência',
-          categoria: 'Árbitro',
-          precoHora: 50.00
-        }
-      };
-      setUserData(data2);
-      // console.log('Dados do usuário carregados:', data);
+      setUserData(data);
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
     }
@@ -51,9 +159,32 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchUserData();
+    fetchMyGames();
   }, []);
 
-  const hasPrestadorData = Boolean(userData?.dadosPrestadorServico);
+  const hasPrestadorData = userData.dadosPrestacaoServicos.length > 0;
+
+  useEffect(() => {
+    if (viewMode === 'prestador') {
+      fetchConvocations();
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (hasPrestadorData) {
+      setViewMode('prestador');
+    }
+  }, [convocations]);
+
+  const fetchConvocations = async () => {
+    try {
+      const convocationsData = await getConvocations();
+      setConvocations(convocationsData);
+      console.log('Convocações carregadas:', convocationsData);
+    } catch (error) {
+      console.error('Erro ao buscar convocações:', error);
+    }
+  }
 
   const handleSelectMode = (mode: 'peladeiro' | 'prestador') => {
     if (mode === 'prestador' && !hasPrestadorData) return;
@@ -201,38 +332,100 @@ export default function ProfilePage() {
                 <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 20, marginBottom: 16 }}>
                   Dados de Prestador
                 </Text>
-                <View style={{ backgroundColor: '#2A2A2A', padding: 16, borderRadius: 8, gap: 12 }}>
-                  {userData.dadosPrestadorServico ? (
-                    <>
-                      <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>
-                        {userData.dadosPrestadorServico.categoria || 'Categoria não informada'}
-                      </Text>
-                      <Text style={{ color: '#CCCCCC', fontSize: 14 }}>
-                        {userData.dadosPrestadorServico.descricao || 'Sem descrição cadastrada.'}
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text style={{ color: '#C7FF00', fontWeight: '700', fontSize: 16 }}>
-                          R$ {userData.dadosPrestadorServico.precoHora?.toFixed(2) || '0,00'}/h
+                <>
+                  {userData.dadosPrestacaoServicos.length > 0 ? (
+                    userData.dadosPrestacaoServicos.map((servico) => (
+                      <View key={servico.idPrestador} style={{ backgroundColor: '#2A2A2A', padding: 16, borderRadius: 8, gap: 8, marginBottom: 16 }}>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>
+                          {servico.tipoPrestadorServico || 'Categoria não informada'}
                         </Text>
-                        <TouchableOpacity style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#C7FF00', borderRadius: 8 }}>
-                          <Text style={{ color: '#121212', fontWeight: '700' }}>Editar</Text>
-                        </TouchableOpacity>
+                        <Text style={{ color: '#CCCCCC', fontSize: 14 }}>
+                          {servico.ativo || 'Sem descrição cadastrada.'}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Text style={{ color: '#C7FF00', fontWeight: '700', fontSize: 16 }}>
+                            R$ {servico.valor?.toFixed(2) || '0,00'}/h
+                          </Text>
+                          <TouchableOpacity style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#C7FF00', borderRadius: 8 }}>
+                            <Text style={{ color: '#121212', fontWeight: '700' }}>Editar</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    </>
+                    ))
                   ) : (
-                    <Text style={{ color: '#CCCCCC', fontSize: 14 }}>
-                      Nenhum dado de prestador cadastrado.
-                    </Text>
+                    <View style={{ backgroundColor: '#2A2A2A', padding: 16, borderRadius: 8 }}>
+                      <Text style={{ color: '#CCCCCC', fontSize: 14 }}>
+                        Nenhum dado de prestador cadastrado.
+                      </Text>
+                    </View>
                   )}
-                </View>
 
-                <View style={{ marginTop: 16, backgroundColor: '#1E1E1E', padding: 16, borderRadius: 8, borderColor: 'rgba(199,255,0,0.2)', borderWidth: 1 }}>
-                  <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16, marginBottom: 8 }}>
-                    Serviços recentes
+                  <View style={{ width: '100%', marginTop: 24 }}>
+                    <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 20, marginBottom: 16 }}>
+                      Convocações
+                    </Text>
+                    {convocations.length > 0 ? (
+                      convocations.map((convocation) => (
+                        renderCard({
+                          nome: convocation.evento.nome,
+                          id: convocation.evento.id,
+                          descricao: convocation.evento.descricao,
+                          localizacao: convocation.evento.localizacao,
+                          dataHora: convocation.evento.dataHora,
+                          custoPeladeiro: convocation.evento.custoPeladeiro,
+                          custoPrestadorServico: 0,
+                          vagas: convocation.evento.vagas,
+                          donoEvento: {
+                            id: convocation.evento.donoEvento.id,
+                            nome: convocation.evento.donoEvento.nome,
+                            nota: convocation.evento.donoEvento.nota,
+                          },
+                          peladeirosInscritos: [],
+                          tipoCampo: convocation.evento.tipoCampo,
+                          intensidade: convocation.evento.intensidade
+                        }, convocation.tipoPrestador)
+                      ))
+                    ) : (
+                      <View style={{ backgroundColor: '#1E1E1E', padding: 16, borderRadius: 8, borderColor: 'rgba(199,255,0,0.2)', borderWidth: 1 }}>
+                        <Text style={{ color: '#CCCCCC', fontSize: 16 }}>
+                          Você ainda não foi convocado para nenhum serviço.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </>
+                <View style={{ width: '100%' }}>
+                  <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 20, marginBottom: 16, marginTop: 24 }}>
+                    Serviços Recentes
                   </Text>
-                  <Text style={{ color: '#CCCCCC', fontSize: 14 }}>
-                    Nenhum serviço realizado ainda. Divulgue seu trabalho para receber pedidos.
-                  </Text>
+                  {games.length > 0 ? (
+                      games.map((game) => (
+                        renderCard({
+                          nome: game.nome,
+                          id: game.id,
+                          descricao: game.descricao,
+                          localizacao: game.localizacao,
+                          dataHora: game.dataHora,
+                          custoPeladeiro: game.custoPeladeiro,
+                          custoPrestadorServico: 0,
+                          vagas: game.vagas,
+                          donoEvento: {
+                            id: game.donoEvento.id,
+                            nome: game.donoEvento.nome,
+                            nota: game.donoEvento.nota,
+                          },
+                          peladeirosInscritos: [],
+                          tipoCampo: game.tipoCampo,
+                          intensidade: game.intensidade
+                        }, "accepted")
+                      ))
+                    ) : (
+                      <View style={{ backgroundColor: '#1E1E1E', padding: 16, borderRadius: 8, borderColor: 'rgba(199,255,0,0.2)', borderWidth: 1 }}>
+                        <Text style={{ color: '#CCCCCC', fontSize: 16 }}>
+                          Você não possui serviços recentes.
+                        </Text>
+                      </View>
+                    )}
                 </View>
               </View>
             )}
@@ -316,5 +509,36 @@ const styles = StyleSheet.create({
     color: '#121212',
     fontWeight: '700',
     fontSize: 16,
+  },
+  // Estilos faltantes para renderCard
+  card: {
+    backgroundColor: '#1E1E1E',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(204,204,204,0.08)',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sessionSport: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sessionLevel: {
+    color: '#C7FF00',
+    marginTop: 2,
+  },
+  cardBody: {
+    marginTop: 4,
+  },
+  metaText: {
+    color: '#CCCCCC',
+    marginBottom: 4,
   },
 });

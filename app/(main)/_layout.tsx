@@ -35,7 +35,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="my-sessions"
         options={{
-          title: 'Minhas Sessões',
+          title: 'Minhas Peladas',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="soccerball" color={color} />,
         }}
       />

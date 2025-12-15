@@ -10,6 +10,7 @@ export interface CreateEventDTO {
   intensidade: string;
   tipoCampo: string;
   vagas: number; // Novo campo adicionado
+  minutos: number;
   custoPeladeiro: number;
   custoPrestadorServico: number;
 }
