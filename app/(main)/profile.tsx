@@ -176,6 +176,7 @@ export default function ProfilePage() {
                   <View>
                     <TouchableOpacity
                       style={{ backgroundColor: '#2A2A2A', padding: 16, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}
+                      onPress={() => router.push('/screens/create-service?role=arbitro')}
                     >
                       <MaterialCommunityIcons name="whistle" size={32} color="#C7FF00" />
                       <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16, marginTop: 8 }}>
@@ -184,6 +185,7 @@ export default function ProfilePage() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={{ backgroundColor: '#2A2A2A', padding: 16, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                      onPress={() => router.push('/screens/create-service?role=goleiro')}
                     >
                       <MaterialCommunityIcons name="handball" size={32} color="#C7FF00" />
                       <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16, marginTop: 8, }}>
